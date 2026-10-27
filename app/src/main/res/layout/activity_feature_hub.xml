@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="?android:attr/colorBackground">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="UTILITY APP • TOOLS"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:paddingBottom="8dp" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Templates, recipients, scheduling, history and data tools"
+            android:textSize="14sp"
+            android:alpha="0.75"
+            android:paddingBottom="20dp" />
+        <Button android:id="@+id/feature_templates" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="SMS Templates" />
+        <Button android:id="@+id/feature_multi_sms" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Multiple Recipients • SMS" />
+        <Button android:id="@+id/feature_schedule" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Schedule SMS / Reminder" />
+        <Button android:id="@+id/feature_history" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Call / SMS Activity History" />
+        <Button android:id="@+id/feature_backup" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Backup / Restore JSON" />
+        <Button android:id="@+id/feature_theme" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Appearance / Theme" />
+        <Button android:id="@+id/feature_call_timer" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Call Duration Control Info" />
+        <Button android:id="@+id/feature_back" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Back" />
+    </LinearLayout>
+</ScrollView>
