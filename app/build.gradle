@@ -3,7 +3,6 @@ plugins {
 }
 
 android {
-    archivesBaseName = "Utility"
     namespace 'com.util'
     compileSdk 34
 
