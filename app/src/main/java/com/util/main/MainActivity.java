@@ -47,7 +47,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void mainInit() {
         setMainColors();
-        setContentView(R.layout.activity_main);
+        com.util.databinding.ActivityMainBinding mainBinding = com.util.databinding.ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(mainBinding.getRoot());
         baseContext = getBaseContext();
     }
 
