@@ -8,9 +8,11 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 
 import com.util.R;
 import com.util.automaticredialer.AutomaticRedialerActivity;
+import com.util.features.FeatureHubActivity;
 import com.util.messagesender.MessageSenderActivity;
 
 public class MainActivity extends AppCompatActivity {
@@ -24,20 +26,23 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        int savedTheme = getSharedPreferences("utility_feature_data", MODE_PRIVATE)
+                .getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        AppCompatDelegate.setDefaultNightMode(savedTheme);
         super.onCreate(savedInstanceState);
         mainInit();
 
-        // Header
         TextView headerTxt = findViewById(R.id.app_header);
         headerTxt.setText(R.string.app_name);
 
-        // Automatic redialer activity
         Button automaticRedialerBtn = findViewById(R.id.automatic_redialer);
         automaticRedialerBtn.setOnClickListener(v -> startActivity(new Intent(baseContext, AutomaticRedialerActivity.class)));
 
-        // Message sender activity
         Button messageSenderBtn = findViewById(R.id.message_sender);
         messageSenderBtn.setOnClickListener(v -> startActivity(new Intent(baseContext, MessageSenderActivity.class)));
+
+        Button featureHubBtn = findViewById(R.id.feature_hub);
+        featureHubBtn.setOnClickListener(v -> startActivity(new Intent(baseContext, FeatureHubActivity.class)));
     }
 
     private void mainInit() {
