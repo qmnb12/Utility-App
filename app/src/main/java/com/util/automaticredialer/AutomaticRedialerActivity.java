@@ -422,7 +422,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                     boolean afterPickup = false;
                     if (disconnectModeGroup != null) {
                         int checked = disconnectModeGroup.getCheckedRadioButtonId();
-                        if (checked == R.id.ar_mode_after_pickup) {
+                        if (checked == R.id.ar_mode_pickup) {
                             afterPickup = true;
                         }
                     }
