@@ -19,283 +19,289 @@
         android:layout_marginTop="?attr/actionBarSize"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constraintLayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingBottom="16dp"
-        tools:context="com.util.automaticredialer.AutomaticRedialerActivity">
-
-        <Button
-            android:id="@+id/ar_select_contact"
-            android:layout_width="0dp"
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/constraintLayout"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:backgroundTint="@color/color30_dark"
-            android:clickable="true"
-            android:padding="12dp"
-            android:text="@string/ar_select_contact"
-            android:textAllCaps="false"
-            android:textSize="16sp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.138" />
+            android:paddingBottom="24dp"
+            tools:context="com.util.automaticredialer.AutomaticRedialerActivity">
 
-        <LinearLayout
-            android:id="@+id/ar_manual_layout"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginEnd="16dp"
-            android:orientation="horizontal"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ar_select_contact">
-
-            <Spinner
-                android:id="@+id/ar_country_code_spinner"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:padding="10dp"
-                android:spinnerMode="dropdown" />
-
-            <EditText
-                android:id="@+id/ar_manual_number"
+            <Button
+                android:id="@+id/ar_select_contact"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="या मैन्युअली नंबर डालें"
-                android:inputType="phone"
-                android:maxLength="15"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="16dp"
+                android:backgroundTint="@color/color30_dark"
+                android:clickable="true"
                 android:padding="12dp"
-                android:textColor="@android:color/black"
-                android:textColorHint="#666666"
-                android:textSize="16sp" />
-        </LinearLayout>
+                android:text="@string/ar_select_contact"
+                android:textAllCaps="false"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
-        <EditText
-            android:id="@+id/ar_no_of_calls"
-            android:layout_width="70dp"
-            android:layout_height="wrap_content"
-            android:autofillHints="No of Calls"
-            android:inputType="number"
-            android:padding="10dp"
-            android:text="@string/ar_default_no_of_calls"
-            android:textIsSelectable="true"
-            android:textSize="16sp"
-            android:textColor="@android:color/black"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.85"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ar_manual_layout"
-            app:layout_constraintVertical_bias="0.05" />
-
-        <TextView
-            android:id="@+id/ar_no_of_calls_label"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="8dp"
-            android:gravity="center_vertical"
-            android:labelFor="@id/ar_no_of_calls"
-            android:text="@string/ar_number_of_calls"
-            android:textColor="@android:color/black"
-            android:textSize="16sp"
-            app:layout_constraintBottom_toBottomOf="@+id/ar_no_of_calls"
-            app:layout_constraintEnd_toStartOf="@+id/ar_no_of_calls"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/ar_no_of_calls" />
-
-        <EditText
-            android:id="@+id/ar_call_gap"
-            android:layout_width="70dp"
-            android:layout_height="wrap_content"
-            android:autofillHints="Call Gap"
-            android:inputType="number"
-            android:padding="10dp"
-            android:text="@string/ar_default_call_gap"
-            android:textIsSelectable="true"
-            android:textSize="16sp"
-            android:textColor="@android:color/black"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.85"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ar_no_of_calls" />
-
-        <TextView
-            android:id="@+id/ar_call_gap_label"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="8dp"
-            android:gravity="center_vertical"
-            android:labelFor="@id/ar_call_gap"
-            android:text="@string/ar_call_gap_label"
-            android:textColor="@android:color/black"
-            android:textSize="16sp"
-            app:layout_constraintBottom_toBottomOf="@+id/ar_call_gap"
-            app:layout_constraintEnd_toStartOf="@+id/ar_call_gap"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/ar_call_gap" />
-
-        <TextView
-            android:id="@+id/ar_disconnect_mode_label"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="10dp"
-            android:layout_marginEnd="16dp"
-            android:text="ऑटो डिस्कनेक्ट मोड"
-            android:textColor="@android:color/black"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ar_call_gap" />
-
-        <RadioGroup
-            android:id="@+id/ar_disconnect_mode_group"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="6dp"
-            android:layout_marginEnd="16dp"
-            android:orientation="vertical"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ar_disconnect_mode_label">
-
-            <RadioButton
-                android:id="@+id/ar_mode_off"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:id="@+id/ar_manual_layout"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:checked="true"
-                android:text="ऑफ (Auto Disconnect बंद)"
-                android:textColor="@android:color/black"
-                android:textSize="15sp" />
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ar_select_contact">
 
-            <RadioButton
-                android:id="@+id/ar_mode_direct"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Direct Connect - कॉल डायल होते ही X सेकंड बाद डिस्कनेक्ट"
-                android:textColor="@android:color/black"
-                android:textSize="15sp" />
+                <Spinner
+                    android:id="@+id/ar_country_code_spinner"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="10dp"
+                    android:spinnerMode="dropdown" />
 
-            <RadioButton
-                android:id="@+id/ar_mode_pickup"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="After Call Picked - कॉल उठने के बाद X सेकंड बाद डिस्कनेक्ट"
-                android:textColor="@android:color/black"
-                android:textSize="15sp" />
-        </RadioGroup>
-
-        <LinearLayout
-            android:id="@+id/ar_disconnect_time_layout"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="6dp"
-            android:layout_marginEnd="16dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ar_disconnect_mode_group">
+                <EditText
+                    android:id="@+id/ar_manual_number"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="या मैन्युअली नंबर डालें"
+                    android:inputType="phone"
+                    android:maxLength="15"
+                    android:padding="12dp"
+                    android:textColor="@android:color/black"
+                    android:textColorHint="#666666"
+                    android:textSize="16sp" />
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/ar_disconnect_label"
+                android:id="@+id/ar_no_of_calls_label"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="डिस्कनेक्ट टाइम (सेकंड)"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="8dp"
+                android:gravity="center_vertical"
+                android:labelFor="@id/ar_no_of_calls"
+                android:text="@string/ar_number_of_calls"
                 android:textColor="@android:color/black"
-                android:textSize="16sp" />
+                android:textSize="16sp"
+                app:layout_constraintBottom_toBottomOf="@+id/ar_no_of_calls"
+                app:layout_constraintEnd_toStartOf="@+id/ar_no_of_calls"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/ar_no_of_calls" />
 
             <EditText
-                android:id="@+id/ar_disconnect_sec"
+                android:id="@+id/ar_no_of_calls"
                 android:layout_width="70dp"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="16dp"
+                android:autofillHints="No of Calls"
                 android:inputType="number"
                 android:padding="10dp"
-                android:text="5"
+                android:text="@string/ar_default_no_of_calls"
                 android:textColor="@android:color/black"
                 android:textIsSelectable="true"
-                android:textSize="16sp" />
-        </LinearLayout>
+                android:textSize="16sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ar_manual_layout" />
 
-        <TextView
-            android:id="@+id/ar_hint_disconnect"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:gravity="start"
-            android:text="नोट: कुछ डिवाइस पर ITelephony ब्लॉक होने की वजह से काम नहीं कर पाता। नए Android पर TelecomManager.try करके फॉलबैक भी लगा दिया गया है।"
-            android:textColor="#666666"
-            android:textSize="12sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ar_disconnect_time_layout" />
+            <TextView
+                android:id="@+id/ar_call_gap_label"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="8dp"
+                android:gravity="center_vertical"
+                android:labelFor="@id/ar_call_gap"
+                android:text="@string/ar_call_gap_label"
+                android:textColor="@android:color/black"
+                android:textSize="16sp"
+                app:layout_constraintBottom_toBottomOf="@+id/ar_call_gap"
+                app:layout_constraintEnd_toStartOf="@+id/ar_call_gap"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/ar_call_gap" />
 
-        <TextView
-            android:id="@+id/ar_current_call_number"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="12dp"
-            android:layout_marginEnd="16dp"
-            android:gravity="center"
-            android:labelFor="@id/ar_no_of_calls"
-            android:text="@string/ar_current_no_of_call"
-            android:textColor="@android:color/black"
-            android:textSize="16sp"
-            app:layout_anchor="@+id/include"
-            app:layout_anchorGravity="center"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ar_hint_disconnect" />
+            <EditText
+                android:id="@+id/ar_call_gap"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:autofillHints="Call Gap"
+                android:inputType="number"
+                android:padding="10dp"
+                android:text="@string/ar_default_call_gap"
+                android:textColor="@android:color/black"
+                android:textIsSelectable="true"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ar_no_of_calls" />
 
-        <Button
-            android:id="@+id/ar_button_call"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="12dp"
-            android:layout_marginEnd="16dp"
-            android:backgroundTint="@color/color10_light"
-            android:clickable="false"
-            android:padding="12dp"
-            android:text="@string/ar_default_call_text"
-            android:textAllCaps="false"
-            android:textSize="16sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ar_current_call_number" />
+            <TextView
+                android:id="@+id/ar_disconnect_mode_label"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="14dp"
+                android:layout_marginEnd="16dp"
+                android:text="ऑटो डिस्कनेक्ट मोड"
+                android:textColor="@android:color/black"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ar_call_gap" />
 
-        <Button
-            android:id="@+id/ar_stop_call"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginEnd="16dp"
-            android:backgroundTint="@color/color30_light"
-            android:padding="12dp"
-            android:text="@string/ar_stop_calling"
-            android:textAllCaps="false"
-            android:textSize="16sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ar_button_call" />
+            <RadioGroup
+                android:id="@+id/ar_disconnect_mode_group"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginEnd="16dp"
+                android:orientation="vertical"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ar_disconnect_mode_label">
 
-        <include layout="@layout/main_menu_button" />
-    </androidx.constraintlayout.widget.ConstraintLayout>
+                <RadioButton
+                    android:id="@+id/ar_mode_off"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:text="ऑफ (Auto Disconnect बंद)"
+                    android:textColor="@android:color/black"
+                    android:textSize="15sp" />
+
+                <RadioButton
+                    android:id="@+id/ar_mode_direct"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Direct - डायल होते ही X सेकंड बाद डिस्कनेक्ट"
+                    android:textColor="@android:color/black"
+                    android:textSize="15sp" />
+
+                <RadioButton
+                    android:id="@+id/ar_mode_pickup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="After Pickup - कॉल उठने के बाद X सेकंड बाद डिस्कनेक्ट"
+                    android:textColor="@android:color/black"
+                    android:textSize="15sp" />
+            </RadioGroup>
+
+            <LinearLayout
+                android:id="@+id/ar_disconnect_time_layout"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ar_disconnect_mode_group">
+
+                <TextView
+                    android:id="@+id/ar_disconnect_label"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="डिस्कनेक्ट टाइम (सेकंड)"
+                    android:textColor="@android:color/black"
+                    android:textSize="16sp" />
+
+                <EditText
+                    android:id="@+id/ar_disconnect_sec"
+                    android:layout_width="70dp"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:padding="10dp"
+                    android:text="5"
+                    android:textColor="@android:color/black"
+                    android:textIsSelectable="true"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/ar_hint_disconnect"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginEnd="16dp"
+                android:gravity="start"
+                android:text="नोट: कुछ डिवाइस पर सिस्टम कॉल काटने की अनुमति नहीं देता। फिर भी TelecomManager और ITelephony दोनों से कोशिश की जाती है।"
+                android:textColor="#666666"
+                android:textSize="12sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ar_disconnect_time_layout" />
+
+            <TextView
+                android:id="@+id/ar_current_call_number"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="14dp"
+                android:layout_marginEnd="16dp"
+                android:gravity="center"
+                android:text="@string/ar_current_no_of_call"
+                android:textColor="@android:color/black"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ar_hint_disconnect" />
+
+            <Button
+                android:id="@+id/ar_button_call"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="16dp"
+                android:backgroundTint="@color/color10_light"
+                android:clickable="false"
+                android:padding="12dp"
+                android:text="@string/ar_default_call_text"
+                android:textAllCaps="false"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ar_current_call_number" />
+
+            <Button
+                android:id="@+id/ar_stop_call"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:backgroundTint="@color/color30_light"
+                android:padding="12dp"
+                android:text="@string/ar_stop_calling"
+                android:textAllCaps="false"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ar_button_call" />
+
+            <include
+                android:id="@+id/main_menu_include"
+                layout="@layout/main_menu_button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ar_stop_call" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

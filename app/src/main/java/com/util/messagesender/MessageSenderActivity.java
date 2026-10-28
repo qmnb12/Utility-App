@@ -52,6 +52,7 @@ public class MessageSenderActivity extends AppCompatActivity {
     private SharedPreferences prefs;
     private android.widget.Spinner countryCodeSpinner;
     private final String[] countryCodes = {"+91", "+1", "+44", "+971", "+61", "+65", "+81", "+49", "+33", "+86", "+92", "+880", "+94", "+977", "+966", "+234", "+27", "+60", "+20", "+7"};
+    private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -259,13 +260,6 @@ public class MessageSenderActivity extends AppCompatActivity {
             }
         } catch (Exception e) {
         }
-        if (prefs != null) {
-            SharedPreferences.Editor editor = prefs.edit();
-            if (noOfMessagesTextView != null) editor.putString("no_of_messages", noOfMessagesTextView.getText().toString());
-            if (messageGapTextView != null) editor.putString("message_gap", messageGapTextView.getText().toString());
-            if (enterMessageTextView != null) editor.putString("message_text", enterMessageTextView.getText().toString());
-            editor.apply();
-        }
         currentNumberOfMessage.setText(getString(R.string.ms_current_no_of_message, 0));
         currentNumberOfMessage.setVisibility(View.VISIBLE);
 
@@ -364,32 +358,64 @@ public class MessageSenderActivity extends AppCompatActivity {
     }
 
     class MessageTask extends TimerTask {
-        int currentReverseNoOfMessage = Integer.parseInt(noOfMessagesTextView.getText().toString());
+        private int remaining = -1;
+
+        @Override
         public void run() {
-            if (currentReverseNoOfMessage > 0) {
-                currentNumberOfMessage.setText(getString(R.string.ms_current_no_of_message, (Integer.parseInt(noOfMessagesTextView.getText().toString()) - currentReverseNoOfMessage + 1)));
-                String messageToSend = new String(templateMessage);
-                if(randomDigitsSet != null && !randomDigitsSet.isEmpty()){
-                    for(String digitStr : randomDigitsSet)
-                        messageToSend = Common.replacePlaceholderWithNumberStr(messageToSend, (getString(R.string.ms_random_digit) + digitStr + "#"), Integer.parseInt(digitStr));
+            // TimerTask runs on a background thread: hop to the main thread before touching UI
+            handler.post(() -> doSendStep());
+        }
+
+        private void doSendStep() {
+            try {
+                if (remaining < 0) {
+                    String s = noOfMessagesTextView.getText().toString().trim();
+                    remaining = s.isEmpty() ? 0 : Integer.parseInt(s);
                 }
-                if(randomStringSet != null && !randomStringSet.isEmpty()){
-                    for(String digitStr : randomStringSet)
-                        messageToSend = Common.replacePlaceholderWithCharStr(messageToSend, (getString(R.string.ms_random_string) + digitStr + "#"), Integer.parseInt(digitStr));
+                if (remaining > 0 && number != null && !number.isEmpty()) {
+                    int total = remaining;
+                    currentNumberOfMessage.setText(getString(R.string.ms_current_no_of_message,
+                            (Integer.parseInt(noOfMessagesTextView.getText().toString()) - total + 1)));
+                    remaining--;
+
+                    String messageToSend = templateMessage == null ? "" : new String(templateMessage);
+                    if (randomDigitsSet != null && !randomDigitsSet.isEmpty()) {
+                        for (String digitStr : randomDigitsSet)
+                            messageToSend = Common.replacePlaceholderWithNumberStr(messageToSend, (getString(R.string.ms_random_digit) + digitStr + "#"), Integer.parseInt(digitStr));
+                    }
+                    if (randomStringSet != null && !randomStringSet.isEmpty()) {
+                        for (String digitStr : randomStringSet)
+                            messageToSend = Common.replacePlaceholderWithCharStr(messageToSend, (getString(R.string.ms_random_string) + digitStr + "#"), Integer.parseInt(digitStr));
+                    }
+                    if (smsManager == null)
+                        smsManager = SmsManager.getDefault();
+                    try {
+                        smsManager.sendTextMessage(number, null, messageToSend, null, null);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    stopMessagingButton.setClickable(false);
+                    stopMessagingButton.setBackgroundColor(MainActivity.COLOR30_LIGHT);
+                    currentNumberOfMessage.setVisibility(View.INVISIBLE);
+                    Snackbar.make(findViewById(R.id.ms_stop_message), "Messaging stopped to " + name, Snackbar.LENGTH_LONG).show();
+                    if (timer != null) {
+                        timer.cancel();
+                        timer = null;
+                    }
                 }
-                if(smsManager == null)
-                    smsManager = SmsManager.getDefault();
-                smsManager.sendTextMessage(number, null, messageToSend, null, null);
-                currentReverseNoOfMessage--;
-            } else {
-                System.out.println("Time's up!");
-                stopMessagingButton.setClickable(false);
-//                enterMessageTextView.setEnabled(true);
-                stopMessagingButton.setBackgroundColor(MainActivity.COLOR30_LIGHT);
-                currentNumberOfMessage.setVisibility(View.INVISIBLE);
-                Snackbar.make(findViewById(R.id.ms_stop_message), "Messaging stopped to " + name, Snackbar.LENGTH_LONG).show();
-                timer.cancel();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (timer != null) {
+            timer.cancel();
+            timer = null;
+        }
+        super.onDestroy();
     }
 }

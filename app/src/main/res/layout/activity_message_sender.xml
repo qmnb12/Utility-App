@@ -12,244 +12,246 @@
         app:layout_anchor="@+id/constraintLayout"
         app:layout_anchorGravity="center" />
 
-    <include layout="@layout/main_menu_button" />
-
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_anchor="@+id/include"
-        app:layout_anchorGravity="center"
-        tools:context=".messagesender.MessageSenderActivity">
+        android:fillViewport="true"
+        android:layout_marginTop="?attr/actionBarSize"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <Button
-            android:id="@+id/ms_select_contact"
-            android:layout_width="0dp"
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/constraintLayout"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:backgroundTint="@color/color30_dark"
-            android:clickable="true"
-            android:padding="12dp"
-            android:text="@string/ms_select_contact"
-            android:textAllCaps="false"
-            android:textSize="16sp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.148" />
+            android:paddingBottom="24dp"
+            tools:context=".messagesender.MessageSenderActivity">
 
-        <LinearLayout
-            android:id="@+id/ms_manual_layout"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginEnd="16dp"
-            android:orientation="horizontal"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ms_select_contact">
-
-            <Spinner
-                android:id="@+id/ms_country_code_spinner"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:padding="10dp"
-                android:spinnerMode="dropdown" />
-
-            <EditText
-                android:id="@+id/ms_manual_number"
+            <Button
+                android:id="@+id/ms_select_contact"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="या मैन्युअली नंबर डालें"
-                android:inputType="phone"
-                android:maxLength="15"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="16dp"
+                android:backgroundTint="@color/color30_dark"
+                android:clickable="true"
                 android:padding="12dp"
+                android:text="@string/ms_select_contact"
+                android:textAllCaps="false"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <LinearLayout
+                android:id="@+id/ms_manual_layout"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ms_select_contact">
+
+                <Spinner
+                    android:id="@+id/ms_country_code_spinner"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="10dp"
+                    android:spinnerMode="dropdown" />
+
+                <EditText
+                    android:id="@+id/ms_manual_number"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="या मैन्युअली नंबर डालें"
+                    android:inputType="phone"
+                    android:maxLength="15"
+                    android:padding="12dp"
+                    android:textColor="@android:color/black"
+                    android:textColorHint="#666666"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/ms_no_of_message_label"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="8dp"
+                android:gravity="center_vertical"
+                android:labelFor="@id/ms_no_of_message"
+                android:text="@string/ms_number_of_message"
                 android:textColor="@android:color/black"
-                android:textColorHint="#666666"
-                android:textSize="16sp" />
-        </LinearLayout>
+                android:textSize="16sp"
+                app:layout_constraintBottom_toBottomOf="@+id/ms_no_of_message"
+                app:layout_constraintEnd_toStartOf="@+id/ms_no_of_message"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/ms_no_of_message" />
 
-        <EditText
-            android:id="@+id/ms_no_of_message"
-            android:layout_width="70dp"
-            android:layout_height="wrap_content"
-            android:autofillHints="No of message"
-            android:inputType="number"
-            android:padding="10dp"
-            android:text="@string/ms_default_no_of_message"
-            android:textIsSelectable="true"
-            android:textSize="16sp"
-            android:textColor="@android:color/black"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.85"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ms_manual_layout" />
+            <EditText
+                android:id="@+id/ms_no_of_message"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="16dp"
+                android:autofillHints="No of message"
+                android:inputType="number"
+                android:padding="10dp"
+                android:text="@string/ms_default_no_of_message"
+                android:textColor="@android:color/black"
+                android:textIsSelectable="true"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ms_manual_layout" />
 
-        <TextView
-            android:id="@+id/ms_no_of_message_label"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="8dp"
-            android:gravity="center_vertical"
-            android:labelFor="@id/ms_no_of_message"
-            android:text="@string/ms_number_of_message"
-            android:textColor="@android:color/black"
-            android:textSize="16sp"
-            app:layout_constraintBottom_toBottomOf="@+id/ms_no_of_message"
-            app:layout_constraintEnd_toStartOf="@+id/ms_no_of_message"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/ms_no_of_message" />
+            <TextView
+                android:id="@+id/ms_message_gap_label"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="8dp"
+                android:gravity="center_vertical"
+                android:labelFor="@id/ms_message_gap"
+                android:text="@string/ms_message_gap_label"
+                android:textColor="@android:color/black"
+                android:textSize="16sp"
+                app:layout_constraintBottom_toBottomOf="@+id/ms_message_gap"
+                app:layout_constraintEnd_toStartOf="@+id/ms_message_gap"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/ms_message_gap" />
 
-        <!--        <LinearLayout-->
-<!--            android:layout_width="400dp"-->
-<!--            android:layout_height="200dp">-->
+            <EditText
+                android:id="@+id/ms_message_gap"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:autofillHints="Message Gap"
+                android:inputType="number"
+                android:padding="10dp"
+                android:text="@string/ms_default_message_gap"
+                android:textColor="@android:color/black"
+                android:textIsSelectable="true"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ms_no_of_message" />
 
-<!--            <TextView-->
-<!--                android:layout_width="match_parent"-->
-<!--                android:layout_height="match_parent"-->
-<!--                android:text="#randomNoX#: Random X digit" />-->
+            <TextView
+                android:id="@+id/ms_info_text"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="16dp"
+                android:gravity="start"
+                android:padding="8dp"
+                android:text="@string/ms_info"
+                android:textColor="#666666"
+                android:textSize="13sp"
+                android:textStyle="italic"
+                android:textIsSelectable="true"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ms_message_gap" />
 
-<!--            <TextView-->
-<!--                android:layout_width="match_parent"-->
-<!--                android:layout_height="match_parent"-->
-<!--                android:text="#randomStringX#: Random X char string"/>-->
-<!--        </LinearLayout>-->
+            <TextView
+                android:id="@+id/ms_enter_message_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:labelFor="@id/ms_enter_message"
+                android:text="@string/ms_enter_message_label"
+                android:textColor="@android:color/black"
+                android:textSize="16sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ms_info_text" />
 
-        <EditText
-            android:id="@+id/ms_message_gap"
-            android:layout_width="70dp"
-            android:layout_height="wrap_content"
-            android:autofillHints="Message Gap"
-            android:inputType="number"
-            android:padding="10dp"
-            android:text="@string/ms_default_message_gap"
-            android:textIsSelectable="true"
-            android:textSize="16sp"
-            android:textColor="@android:color/black"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.85"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ms_no_of_message" />
+            <EditText
+                android:id="@+id/ms_enter_message"
+                android:layout_width="0dp"
+                android:layout_height="90dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginEnd="16dp"
+                android:autofillHints="Enter message"
+                android:background="@drawable/black_rect"
+                android:gravity="start|top"
+                android:inputType="textMultiLine"
+                android:maxLength="600"
+                android:padding="10dp"
+                android:textColor="@android:color/black"
+                android:textIsSelectable="true"
+                android:textSize="15sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ms_enter_message_label" />
 
-        <TextView
-            android:id="@+id/ms_message_gap_label"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="8dp"
-            android:gravity="center_vertical"
-            android:labelFor="@id/ms_message_gap"
-            android:text="@string/ms_message_gap_label"
-            android:textColor="@android:color/black"
-            android:textSize="16sp"
-            app:layout_constraintBottom_toBottomOf="@+id/ms_message_gap"
-            app:layout_constraintEnd_toStartOf="@+id/ms_message_gap"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/ms_message_gap" />
+            <TextView
+                android:id="@+id/ms_current_message_number"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="16dp"
+                android:gravity="center"
+                android:text="@string/ms_current_no_of_message"
+                android:textColor="@android:color/black"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ms_enter_message" />
 
-        <TextView
-            android:id="@+id/ms_info_text"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="12dp"
-            android:layout_marginEnd="16dp"
-            android:gravity="center_vertical"
-            android:padding="8dp"
-            android:text="@string/ms_info"
-            android:textColor="@color/color30_light"
-            android:textSize="14sp"
-            android:textStyle="italic"
-            android:textIsSelectable="true"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ms_message_gap_label" />
+            <Button
+                android:id="@+id/ms_button_message"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="16dp"
+                android:backgroundTint="@color/color10_light"
+                android:clickable="false"
+                android:padding="12dp"
+                android:text="@string/ms_default_message_text"
+                android:textAllCaps="false"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ms_current_message_number" />
 
-        <TextView
-            android:id="@+id/ms_enter_message_label"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="12dp"
-            android:gravity="center_vertical"
-            android:labelFor="@id/ms_enter_message"
-            android:text="@string/ms_enter_message_label"
-            android:textColor="@android:color/black"
-            android:textSize="16sp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ms_info_text" />
+            <Button
+                android:id="@+id/ms_stop_message"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:backgroundTint="@color/color30_light"
+                android:padding="12dp"
+                android:text="@string/ms_stop_messaging"
+                android:textAllCaps="false"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ms_button_message" />
 
-        <EditText
-            android:id="@+id/ms_enter_message"
-            android:layout_width="0dp"
-            android:layout_height="90dp"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:autofillHints="Enter message"
-            android:background="@drawable/black_rect"
-            android:gravity="start|top"
-            android:inputType="textMultiLine"
-            android:maxLength="600"
-            android:padding="10dp"
-            android:textColor="@android:color/black"
-            android:textIsSelectable="true"
-            android:textSize="15sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ms_enter_message_label" />
-
-        <TextView
-            android:id="@+id/ms_current_message_number"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="12dp"
-            android:layout_marginEnd="16dp"
-            android:gravity="center"
-            android:labelFor="@id/ms_no_of_message"
-            android:text="@string/ms_current_no_of_message"
-            android:textColor="@android:color/black"
-            android:textSize="16sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ms_enter_message" />
-
-        <Button
-            android:id="@+id/ms_button_message"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="12dp"
-            android:layout_marginEnd="16dp"
-            android:backgroundTint="@color/color10_light"
-            android:clickable="false"
-            android:padding="12dp"
-            android:text="@string/ms_default_message_text"
-            android:textAllCaps="false"
-            android:textSize="16sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ms_current_message_number" />
-
-        <Button
-            android:id="@+id/ms_stop_message"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginEnd="16dp"
-            android:backgroundTint="@color/color30_light"
-            android:padding="12dp"
-            android:text="@string/ms_stop_messaging"
-            android:textAllCaps="false"
-            android:textSize="16sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ms_button_message" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
+            <include
+                android:id="@+id/main_menu_include"
+                layout="@layout/main_menu_button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ms_stop_message" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </ScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

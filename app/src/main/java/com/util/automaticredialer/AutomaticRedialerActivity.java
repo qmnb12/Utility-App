@@ -164,10 +164,11 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
 
         // call button click listener
         callButton.setOnClickListener(new View.OnClickListener() {
-            final ActivityResultLauncher<String> requestCallingPermissionLauncher =
-                    registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                        System.out.println("Is calling permission granted: [" + isGranted + "]");
-                        if (isGranted) {
+            final ActivityResultLauncher<String[]> requestCallingPermissionLauncher =
+                    registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
+                        Boolean granted = result.get(Manifest.permission.CALL_PHONE);
+                        System.out.println("Is calling permission granted: [" + granted + "]");
+                        if (granted != null && granted) {
                             performRepeatedCalls();
                         }
                     });
@@ -218,7 +219,11 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                     performRepeatedCalls();
                 } else {
                     System.out.println("Asking for permission " + Manifest.permission.CALL_PHONE);
-                    requestCallingPermissionLauncher.launch(Manifest.permission.CALL_PHONE);
+                    requestCallingPermissionLauncher.launch(new String[]{
+                            Manifest.permission.CALL_PHONE,
+                            Manifest.permission.READ_PHONE_STATE,
+                            Manifest.permission.ANSWER_PHONE_CALLS
+                    });
                 }
             }
         });
@@ -261,6 +266,33 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         countryCodeSpinner = findViewById(R.id.ar_country_code_spinner);
         disconnectModeGroup = findViewById(R.id.ar_disconnect_mode_group);
 
+        // Manual number typed -> enable the call button right away
+        if (manualNumberEditText != null) {
+            manualNumberEditText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    String typed = s == null ? "" : s.toString().trim();
+                    Button callBtn = findViewById(R.id.ar_button_call);
+                    if (callBtn == null) return;
+                    if (typed.length() >= 4) {
+                        callBtn.setClickable(true);
+                        callBtn.setBackgroundColor(MainActivity.COLOR10_DARK);
+                    } else {
+                        callBtn.setClickable(false);
+                        callBtn.setBackgroundColor(MainActivity.COLOR10_LIGHT);
+                    }
+                }
+            });
+        }
+
         // Setup country code spinner
         if (countryCodeSpinner != null) {
             android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, countryCodes);
@@ -289,15 +321,9 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             disconnectSecEditText.setText(savedDisconnect);
         }
         int savedMode = prefs.getInt("disconnect_mode", -1);
-        if (disconnectModeGroup != null && savedMode != -1) {
-            if (disconnectModeGroup.findViewById(savedMode) != null) {
-                disconnectModeGroup.check(savedMode);
-            }
-        }
-        if (disconnectModeGroup != null) {
-            if (disconnectModeGroup.findViewById(savedMode) != null) {
-                disconnectModeGroup.check(savedMode);
-            }
+        if (disconnectModeGroup != null && savedMode != -1
+                && disconnectModeGroup.findViewById(savedMode) != null) {
+            disconnectModeGroup.check(savedMode);
         }
 
         // Clipboard auto fill
@@ -335,35 +361,18 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         if (!noOfCallsTextView.getText().toString().isEmpty() && number != null && !number.isEmpty()) {
             stopCallingButton.setBackgroundColor(MainActivity.COLOR30_DARK);
             stopCallingButton.setClickable(true);
-        if (timer != null)
-            timer.cancel();
-        if (callGapTextView.getText().toString().isEmpty())
-            callGapTextView.setText(R.string.ar_default_call_gap);
-        // Save settings
-        try {
-            if (prefs != null) {
-                SharedPreferences.Editor editor = prefs.edit();
-                editor.putString("no_of_calls", noOfCallsTextView.getText().toString());
-                editor.putString("call_gap", callGapTextView.getText().toString());
-                if (disconnectSecEditText != null && disconnectSecEditText.getText() != null) {
-                    editor.putString("disconnect_sec", disconnectSecEditText.getText().toString());
-                }
-                editor.apply();
-            }
-        } catch (Exception e) {
-        }
-        if (prefs != null) {
-            SharedPreferences.Editor editor = prefs.edit();
-            if (noOfCallsTextView != null) editor.putString("no_of_calls", noOfCallsTextView.getText().toString());
-            if (callGapTextView != null) editor.putString("call_gap", callGapTextView.getText().toString());
-            if (disconnectSecEditText != null) editor.putString("disconnect_sec", disconnectSecEditText.getText().toString());
-            editor.apply();
-        }
-        currentNoOfCalls.setText(getString(R.string.ar_current_no_of_call, 0));
-        currentNoOfCalls.setVisibility(View.VISIBLE);
-        timer = new Timer();
-        timer.schedule(new AutomaticRedialerActivity.CallTask(), Constants.AUTOMATIC_REDIALER_INITIAL_DELAY, Integer.parseInt(callGapTextView.getText().toString()) * 1000L);
-        Snackbar.make(findViewById(R.id.ar_button_call), "Calling to " + name + " " + noOfCallsTextView.getText().toString() + " times after every " + callGapTextView.getText().toString() + " sec", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+            stopAllDisconnectionInternal();
+            if (timer != null)
+                timer.cancel();
+            if (callGapTextView.getText().toString().isEmpty())
+                callGapTextView.setText(R.string.ar_default_call_gap);
+            currentNoOfCalls.setText(getString(R.string.ar_current_no_of_call, 0));
+            currentNoOfCalls.setVisibility(View.VISIBLE);
+            timer = new Timer();
+            timer.schedule(new AutomaticRedialerActivity.CallTask(), Constants.AUTOMATIC_REDIALER_INITIAL_DELAY, Integer.parseInt(callGapTextView.getText().toString()) * 1000L);
+            Snackbar.make(findViewById(R.id.ar_button_call), "Calling to " + name + " " + noOfCallsTextView.getText().toString() + " times after every " + callGapTextView.getText().toString() + " sec", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+        } else {
+            Snackbar.make(findViewById(R.id.ar_button_call), "पहले नंबर डालें या कॉन्टैक्ट चुनें", Snackbar.LENGTH_LONG).show();
         }
     }
 
@@ -400,64 +409,101 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     }
 
     class CallTask extends TimerTask {
-        int currentReverseNoOfCall = Integer.parseInt(noOfCallsTextView.getText().toString());
+        private int remaining = -1;
 
+        @Override
         public void run() {
-            if (currentReverseNoOfCall > 0) {
-                currentNoOfCalls.setText(getString(R.string.ar_current_no_of_call, (Integer.parseInt(noOfCallsTextView.getText().toString()) - currentReverseNoOfCall + 1)));
-                Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + number));
-                TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-                System.out.println("is Telephony Enabled: " + (telephonyManager != null && telephonyManager.getSimState() == TelephonyManager.SIM_STATE_READY));
-                startActivity(intent);
-                // Auto disconnect after specified seconds
-                try {
-                    stopAllDisconnectionInternal();
-                    int disconnectSec = 0;
-                    if (disconnectSecEditText != null && disconnectSecEditText.getText() != null) {
-                        String ds = disconnectSecEditText.getText().toString().trim();
-                        if (!ds.isEmpty()) {
-                            disconnectSec = Integer.parseInt(ds);
-                        }
-                    }
-                    boolean afterPickup = false;
-                    if (disconnectModeGroup != null) {
-                        int checked = disconnectModeGroup.getCheckedRadioButtonId();
-                        if (checked == R.id.ar_mode_pickup) {
-                            afterPickup = true;
-                        }
-                    }
-                    if (disconnectSec > 0) {
-                        if (afterPickup) {
-                            waitingForPickup = true;
-                            pickupDisconnectSec = disconnectSec;
-                            registerCallStateListener();
-                        } else {
-                            final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
-                            final Runnable r = new Runnable() {
-                                @Override
-                                public void run() {
-                                    endCallNow();
-                                }
-                            };
-                            disconnectHandlers.add(h);
-                            disconnectRunnables.add(r);
-                            h.postDelayed(r, disconnectSec * 1000L);
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
+            // TimerTask runs on a background thread: hop to the main thread before touching UI
+            handler.post(() -> doCallStep());
+        }
+
+        private void doCallStep() {
+            try {
+                if (remaining < 0) {
+                    String s = noOfCallsTextView.getText().toString().trim();
+                    remaining = s.isEmpty() ? 0 : Integer.parseInt(s);
                 }
-                currentReverseNoOfCall--;
-            } else {
-                System.out.println("Time's up!");
-                stopCallingButton.setClickable(false);
-                stopCallingButton.setBackgroundColor(MainActivity.COLOR30_LIGHT);
-                currentNoOfCalls.setVisibility(View.INVISIBLE);
-                Snackbar.make(findViewById(R.id.ar_stop_call), "Calling stopped to " + name, Snackbar.LENGTH_LONG).show();
-                stopAllDisconnectionInternal();
-                if (timer != null) { timer.cancel(); timer = null; }
+                if (remaining > 0 && number != null && !number.isEmpty()) {
+                    int total = remaining;
+                    currentNoOfCalls.setText(getString(R.string.ar_current_no_of_call,
+                            (Integer.parseInt(noOfCallsTextView.getText().toString()) - total + 1)));
+                    remaining--;
+
+                    // Reset any previous call's disconnect scheduling BEFORE dialing
+                    stopAllDisconnectionInternal();
+
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + number));
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(intent);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        return;
+                    }
+
+                    scheduleDisconnect();
+                } else {
+                    finishCalling();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
+    }
+
+    /** Reads the selected mode + seconds and schedules the end-call for the CURRENT call. */
+    private void scheduleDisconnect() {
+        int disconnectSec = 0;
+        try {
+            String ds = disconnectSecEditText != null ? disconnectSecEditText.getText().toString().trim() : "";
+            if (!ds.isEmpty()) disconnectSec = Integer.parseInt(ds);
+        } catch (Exception ignored) {
+        }
+        if (disconnectSec <= 0) return;
+
+        int checked = disconnectModeGroup != null ? disconnectModeGroup.getCheckedRadioButtonId() : R.id.ar_mode_off;
+        if (checked == R.id.ar_mode_pickup) {
+            // start counting only when the other side actually picks up (OFFHOOK)
+            pickupDisconnectSec = disconnectSec;
+            waitingForPickup = true;
+            isCallActive = false;
+            registerCallStateListener();
+        } else if (checked == R.id.ar_mode_direct) {
+            scheduleEndCall(disconnectSec);
+        }
+    }
+
+    private void scheduleEndCall(int seconds) {
+        final Runnable r = new Runnable() {
+            @Override
+            public void run() {
+                endCallNow();
+            }
+        };
+        disconnectRunnables.add(r);
+        handler.postDelayed(r, seconds * 1000L);
+    }
+
+    private void finishCalling() {
+        stopCallingButton.setClickable(false);
+        stopCallingButton.setBackgroundColor(MainActivity.COLOR30_LIGHT);
+        currentNoOfCalls.setVisibility(View.INVISIBLE);
+        Snackbar.make(findViewById(R.id.ar_stop_call), "Calling stopped to " + name, Snackbar.LENGTH_LONG).show();
+        stopAllDisconnectionInternal();
+        if (timer != null) {
+            timer.cancel();
+            timer = null;
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        stopAllDisconnectionInternal();
+        if (timer != null) {
+            timer.cancel();
+            timer = null;
+        }
+        super.onDestroy();
     }
 
     private void endCallNow() {
@@ -510,7 +556,11 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                             waitingForPickup = false;
                         }
                     } else if (TelephonyManager.EXTRA_STATE_IDLE.equals(state)) {
-                        stopAllDisconnectionInternal();
+                        // Call ended by either side: reset pickup state only.
+                        // The redial timer must keep running for the remaining calls.
+                        isCallActive = false;
+                        waitingForPickup = false;
+                        pickupDisconnectSec = 0;
                     }
                 }
             };
