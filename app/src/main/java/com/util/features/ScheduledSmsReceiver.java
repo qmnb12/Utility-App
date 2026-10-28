@@ -12,13 +12,25 @@ public class ScheduledSmsReceiver extends BroadcastReceiver {
         String rawNumbers = intent.getStringExtra("numbers");
         String message = intent.getStringExtra("message");
         if (rawNumbers == null || message == null || message.trim().isEmpty()) return;
+        if (context.checkSelfPermission(android.Manifest.permission.SEND_SMS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(context, "SMS permission not granted", Toast.LENGTH_LONG).show();
+            return;
+        }
         try {
             SmsManager manager = SmsManager.getDefault();
+            java.util.ArrayList<String> parts = message.length() > 160
+                    ? manager.divideMessage(message)
+                    : null;
             int sent = 0;
             for (String raw : rawNumbers.split("[,;\\n]+")) {
                 String number = raw.trim();
                 if (!number.isEmpty()) {
-                    manager.sendTextMessage(number, null, message, null, null);
+                    if (parts != null) {
+                        manager.sendMultipartTextMessage(number, null, parts, null, null);
+                    } else {
+                        manager.sendTextMessage(number, null, message, null, null);
+                    }
                     sent++;
                 }
             }

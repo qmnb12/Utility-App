@@ -59,6 +59,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private boolean isCallActive = false;
     private int pickupDisconnectSec = 0;
     private boolean waitingForPickup = false;
+    /** true when the manual field was filled automatically from the clipboard (not typed by the user). */
+    private boolean autoFilledFromClipboard = false;
+    /** total number of calls requested for the running loop */
+    private int totalCalls = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -111,6 +115,13 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         stopCallingButton.setClickable(false);
 
         // select contact click listener
+        final ActivityResultLauncher<String> requestContactsPermissionLauncher =
+                registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                    if (!isGranted) {
+                        Snackbar.make(findViewById(R.id.ar_select_contact),
+                                "कॉन्टैक्ट पढ़ने की अनुमति ज़रूरी है", Snackbar.LENGTH_LONG).show();
+                    }
+                });
         selectContactButton.setOnClickListener(new View.OnClickListener() {
             final ActivityResultLauncher<Void> getContact = registerForActivityResult(new ActivityResultContracts.PickContact(), uri -> {
                 // Handle the returned Uri
@@ -133,6 +144,11 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                             if (nameIndex != -1 && numberIndex != -1) {
                                 name = phoneCursor.getString(nameIndex);
                                 number = phoneCursor.getString(numberIndex);
+                                // a picked contact must win over a clipboard-filled number
+                                autoFilledFromClipboard = false;
+                                if (manualNumberEditText != null) {
+                                    manualNumberEditText.setText("");
+                                }
                                 callButton.setText(getString(R.string.ar_default_call_text, name));
                                 callButton.setClickable(true);
                                 callButton.setBackgroundColor(MainActivity.COLOR10_DARK);
@@ -152,12 +168,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (ContextCompat.checkSelfPermission(baseContext, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
-                    System.out.println("Already have the permission of " + Manifest.permission.READ_CONTACTS);
                     getContact.launch(null);
-
                 } else {
-                    System.out.println("Asking for permission " + Manifest.permission.READ_CONTACTS);
-                    getContact.launch(null);
+                    // must ask first, otherwise the picker opens without contact data
+                    requestContactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS);
                 }
             }
         });
@@ -167,9 +181,18 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             final ActivityResultLauncher<String[]> requestCallingPermissionLauncher =
                     registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
                         Boolean granted = result.get(Manifest.permission.CALL_PHONE);
+                        Boolean answerGranted = result.get(Manifest.permission.ANSWER_PHONE_CALLS);
                         System.out.println("Is calling permission granted: [" + granted + "]");
                         if (granted != null && granted) {
+                            if (answerGranted == null || !answerGranted) {
+                                Snackbar.make(findViewById(R.id.ar_button_call),
+                                        "कॉल काटने की अनुमति नहीं मिली — ऑटो डिस्कनेक्ट काम नहीं करेगा",
+                                        Snackbar.LENGTH_LONG).show();
+                            }
                             performRepeatedCalls();
+                        } else {
+                            Snackbar.make(findViewById(R.id.ar_button_call),
+                                    "कॉल की अनुमति ज़रूरी है", Snackbar.LENGTH_LONG).show();
                         }
                     });
 
@@ -195,30 +218,40 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                     }
                 } catch (Exception e) {
                 }
-                if (manualNumberEditText != null && manualNumberEditText.getText() != null) {
+                // Manual number wins ONLY if the user typed it themselves
+                // (clipboard auto-fill must not override a picked contact).
+                boolean userTypedNumber = manualNumberEditText != null
+                        && manualNumberEditText.getText() != null
+                        && !manualNumberEditText.getText().toString().trim().isEmpty()
+                        && !autoFilledFromClipboard;
+                if (userTypedNumber) {
                     String manualNum = manualNumberEditText.getText().toString().trim();
-                    if (!manualNum.isEmpty()) {
-                        String code = (countryCodeSpinner != null && countryCodeSpinner.getSelectedItem() != null) ? countryCodeSpinner.getSelectedItem().toString() : "+91";
-                        if (prefs != null) {
-                            prefs.edit().putString("country_code", code).apply();
-                        }
-                        if (!manualNum.startsWith("+")) {
-                            if (manualNum.startsWith("0")) {
-                                manualNum = manualNum.substring(1);
-                            }
-                            number = code + manualNum;
-                        } else {
-                            number = manualNum;
-                        }
-                        name = number;
-                        callButton.setText(getString(R.string.ar_default_call_text, name));
+                    String code = (countryCodeSpinner != null && countryCodeSpinner.getSelectedItem() != null) ? countryCodeSpinner.getSelectedItem().toString() : "+91";
+                    if (prefs != null) {
+                        prefs.edit().putString("country_code", code).apply();
                     }
+                    if (!manualNum.startsWith("+")) {
+                        if (manualNum.startsWith("0")) {
+                            manualNum = manualNum.substring(1);
+                        }
+                        number = code + manualNum;
+                    } else {
+                        number = manualNum;
+                    }
+                    name = number;
+                    callButton.setText(getString(R.string.ar_default_call_text, name));
                 }
-                if (ContextCompat.checkSelfPermission(baseContext, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
-                    System.out.println("Already have the permission " + Manifest.permission.CALL_PHONE);
+                if (number == null || number.trim().isEmpty()) {
+                    Snackbar.make(v, "पहले नंबर डालें या कॉन्टैक्ट चुनें", Snackbar.LENGTH_LONG).show();
+                    return;
+                }
+                boolean hasCallPhone = ContextCompat.checkSelfPermission(baseContext, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED;
+                boolean hasAnswer = ContextCompat.checkSelfPermission(baseContext, Manifest.permission.ANSWER_PHONE_CALLS) == PackageManager.PERMISSION_GRANTED;
+                boolean hasPhoneState = ContextCompat.checkSelfPermission(baseContext, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED;
+                if (hasCallPhone && hasAnswer && hasPhoneState) {
                     performRepeatedCalls();
                 } else {
-                    System.out.println("Asking for permission " + Manifest.permission.CALL_PHONE);
+                    // ANSWER_PHONE_CALLS is required to hang up automatically on Android 9+
                     requestCallingPermissionLauncher.launch(new String[]{
                             Manifest.permission.CALL_PHONE,
                             Manifest.permission.READ_PHONE_STATE,
@@ -229,14 +262,9 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         });
 
         stopCallingButton.setOnClickListener(v -> {
-            stopAllDisconnectionInternal();
-            if (timer != null) {
-                System.out.println("Cancel calling");
-                currentNoOfCalls.setVisibility(View.INVISIBLE);
-                stopCallingButton.setClickable(false);
-                stopCallingButton.setBackgroundColor(MainActivity.COLOR30_LIGHT);
-                timer.cancel();
-                timer = null;
+            boolean wasRunning = timer != null;
+            stopCallingLoop();
+            if (wasRunning) {
                 Snackbar.make(v, "Calling stopped to " + name, Snackbar.LENGTH_LONG).show();
             }
         });
@@ -286,6 +314,8 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 @Override
                 public void afterTextChanged(Editable s) {
                     String typed = s == null ? "" : s.toString().trim();
+                    // user is editing manually -> the clipboard value no longer has priority
+                    autoFilledFromClipboard = false;
                     Button callBtn = findViewById(R.id.ar_button_call);
                     if (callBtn == null) return;
                     if (typed.length() >= 4) {
@@ -354,6 +384,8 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                                     }
                                 }
                                 manualNumberEditText.setText(clipStr);
+                                // set AFTER setText: the TextWatcher resets this flag on every change
+                                autoFilledFromClipboard = true;
                             }
                         }
                     }
@@ -364,25 +396,64 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     }
 
     private void performRepeatedCalls() {
-        if (!noOfCallsTextView.getText().toString().isEmpty() && number != null && !number.isEmpty()) {
-            stopCallingButton.setBackgroundColor(MainActivity.COLOR30_DARK);
-            stopCallingButton.setClickable(true);
-            stopAllDisconnectionInternal();
-            if (timer != null)
-                timer.cancel();
-            if (callGapTextView.getText().toString().isEmpty())
-                callGapTextView.setText(R.string.ar_default_call_gap);
-            currentNoOfCalls.setText(getString(R.string.ar_current_no_of_call, 0));
-            currentNoOfCalls.setVisibility(View.VISIBLE);
-            timer = new Timer();
-            timer.schedule(new AutomaticRedialerActivity.CallTask(), Constants.AUTOMATIC_REDIALER_INITIAL_DELAY, Integer.parseInt(callGapTextView.getText().toString()) * 1000L);
-            Snackbar.make(findViewById(R.id.ar_button_call), "Calling to " + name + " " + noOfCallsTextView.getText().toString() + " times after every " + callGapTextView.getText().toString() + " sec", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-        } else {
+        if (number == null || number.trim().isEmpty()) {
             Snackbar.make(findViewById(R.id.ar_button_call), "पहले नंबर डालें या कॉन्टैक्ट चुनें", Snackbar.LENGTH_LONG).show();
+            return;
         }
+        String callsTxt = noOfCallsTextView.getText().toString().trim();
+        if (callsTxt.isEmpty()) {
+            noOfCallsTextView.setText(R.string.ar_default_no_of_calls);
+            callsTxt = noOfCallsTextView.getText().toString().trim();
+        }
+        int parsedCalls = 0;
+        try {
+            parsedCalls = Integer.parseInt(callsTxt);
+        } catch (Exception ignored) {
+            parsedCalls = 0;
+        }
+        if (parsedCalls <= 0) {
+            Snackbar.make(findViewById(R.id.ar_button_call), "कॉल की संख्या सही डालें", Snackbar.LENGTH_LONG).show();
+            return;
+        }
+        // never let two loops run at once (this also resets remaining/totalCalls)
+        stopCallingLoop();
+        totalCalls = parsedCalls;
+        remaining = totalCalls;
+
+        stopCallingButton.setBackgroundColor(MainActivity.COLOR30_DARK);
+        stopCallingButton.setClickable(true);
+        if (callGapTextView.getText().toString().trim().isEmpty())
+            callGapTextView.setText(R.string.ar_default_call_gap);
+
+        // gap must be >= 1 second, otherwise Timer.schedule throws IllegalArgumentException
+        long gapSec = 1;
+        try {
+            gapSec = Long.parseLong(callGapTextView.getText().toString().trim());
+        } catch (Exception ignored) {
+        }
+        if (gapSec < 1) {
+            gapSec = 1;
+            callGapTextView.setText("1");
+        }
+
+        currentNoOfCalls.setText(getString(R.string.ar_current_no_of_call, 0));
+        currentNoOfCalls.setVisibility(View.VISIBLE);
+        try {
+            timer = new Timer();
+            timer.schedule(new AutomaticRedialerActivity.CallTask(), Constants.AUTOMATIC_REDIALER_INITIAL_DELAY, gapSec * 1000L);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Snackbar.make(findViewById(R.id.ar_button_call), "कॉलिंग शुरू नहीं हो सकी", Snackbar.LENGTH_LONG).show();
+            return;
+        }
+        Snackbar.make(findViewById(R.id.ar_button_call), "Calling to " + name + " " + callsTxt + " times after every " + gapSec + " sec", Snackbar.LENGTH_LONG).setAction("Action", null).show();
     }
 
-    private void stopAllDisconnectionInternal() {
+    /**
+     * Clears ONLY the pending end-call timers/receiver of the previous call.
+     * Does NOT touch the redial loop (timer) — that must keep running.
+     */
+    private void clearDisconnectScheduling() {
         try {
             if (disconnectRunnables != null) {
                 for (int i = 0; i < disconnectRunnables.size(); i++) {
@@ -396,27 +467,25 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             if (disconnectHandlers != null) {
                 disconnectHandlers.clear();
             }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
+        isCallActive = false;
+        waitingForPickup = false;
+        pickupDisconnectSec = 0;
+    }
+
+    private void stopAllDisconnectionInternal() {
+        clearDisconnectScheduling();
         try {
             if (callStateReceiver != null) {
                 unregisterReceiver(callStateReceiver);
                 callStateReceiver = null;
             }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
-        isCallActive = false;
-        pickupDisconnectSec = 0;
-        waitingForPickup = false;
-    }
-
-    private void stopAllDisconnection() {
-        stopAllDisconnectionInternal();
     }
 
     class CallTask extends TimerTask {
-        private int remaining = -1;
-
         @Override
         public void run() {
             // TimerTask runs on a background thread: hop to the main thread before touching UI
@@ -427,16 +496,20 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             try {
                 if (remaining < 0) {
                     String s = noOfCallsTextView.getText().toString().trim();
-                    remaining = s.isEmpty() ? 0 : Integer.parseInt(s);
+                    try {
+                        totalCalls = s.isEmpty() ? 0 : Integer.parseInt(s);
+                    } catch (Exception ignored) {
+                        totalCalls = 0;
+                    }
+                    remaining = totalCalls;
                 }
                 if (remaining > 0 && number != null && !number.isEmpty()) {
-                    int total = remaining;
                     currentNoOfCalls.setText(getString(R.string.ar_current_no_of_call,
-                            (Integer.parseInt(noOfCallsTextView.getText().toString()) - total + 1)));
+                            (totalCalls - remaining + 1)));
                     remaining--;
 
-                    // Reset any previous call's disconnect scheduling BEFORE dialing
-                    stopAllDisconnectionInternal();
+                    // Reset ONLY the previous call's disconnect scheduling (not the loop state)
+                    clearDisconnectScheduling();
 
                     try {
                         Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + number));
@@ -465,9 +538,14 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             if (!ds.isEmpty()) disconnectSec = Integer.parseInt(ds);
         } catch (Exception ignored) {
         }
-        if (disconnectSec <= 0) return;
 
         int checked = disconnectModeGroup != null ? disconnectModeGroup.getCheckedRadioButtonId() : R.id.ar_mode_off;
+        if (checked == R.id.ar_mode_off || disconnectSec <= 0) {
+            // still listen for call state so the loop knows a call is in progress
+            registerCallStateListener();
+            return;
+        }
+
         if (checked == R.id.ar_mode_pickup) {
             // start counting only when the other side actually picks up (OFFHOOK)
             pickupDisconnectSec = disconnectSec;
@@ -475,6 +553,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             isCallActive = false;
             registerCallStateListener();
         } else if (checked == R.id.ar_mode_direct) {
+            // mark a call as active immediately so onStop() does not kill the loop
+            isCallActive = true;
+            waitingForPickup = false;
+            registerCallStateListener();
             scheduleEndCall(disconnectSec);
         }
     }
@@ -505,16 +587,49 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        // App went to background (user pressed Back/Home, or the dialer covered us).
-        // Default: stop the whole redial loop so calls do NOT keep firing in the background.
+        // The dialer/call screen covering us ALSO triggers onStop().
+        // So the loop is only stopped when the user really leaves the app (onDestroy / Back),
+        // or when background mode is OFF and no call is in progress.
+        if (isChangingConfigurations()) return;
+        if (isFinishing()) {
+            stopCallingLoop();
+            return;
+        }
         boolean runInBackground = prefs != null && prefs.getBoolean("run_in_background", false);
-        if (!runInBackground && !isChangingConfigurations()) {
+        if (runInBackground) return;
+        // give the dialer a moment to come up before deciding we were backgrounded
+        handler.postDelayed(backgroundStopRunnable, 3000);
+    }
+
+    private final Runnable backgroundStopRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (isFinishing() || isChangingConfigurations()) return;
+            boolean runInBackground = prefs != null && prefs.getBoolean("run_in_background", false);
+            if (runInBackground) return;
+            if (timer == null) return;          // loop already finished
+            if (isCallFlowActive()) {           // our own call is ringing/active -> keep going
+                handler.postDelayed(this, 3000);
+                return;
+            }
             stopCallingLoop();
         }
+    };
+
+    /** True while a call we dialed is still ringing/active. */
+    private boolean isCallFlowActive() {
+        return isCallActive || waitingForPickup;
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        handler.removeCallbacks(backgroundStopRunnable);
     }
 
     @Override
     protected void onDestroy() {
+        handler.removeCallbacksAndMessages(null);
         stopCallingLoop();
         super.onDestroy();
     }
@@ -526,6 +641,14 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             timer.cancel();
             timer = null;
         }
+        // drop any queued CallTask steps so they cannot touch a destroyed Activity
+        try {
+            handler.removeCallbacksAndMessages(null);
+        } catch (Exception ignored) {
+        }
+        // reset the counter so the next run starts from the requested number again
+        remaining = -1;
+        totalCalls = 0;
         try {
             if (stopCallingButton != null) {
                 stopCallingButton.setClickable(false);
@@ -539,18 +662,25 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     }
 
     private void endCallNow() {
+        boolean ended = false;
+        // 1) Official API (Android 9+) — needs ANSWER_PHONE_CALLS
         try {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                 android.telecom.TelecomManager telecomManager = (android.telecom.TelecomManager) getSystemService(Context.TELECOM_SERVICE);
                 if (telecomManager != null && ContextCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS) == PackageManager.PERMISSION_GRANTED) {
                     telecomManager.endCall();
-                    return;
+                    ended = true;
                 }
             }
         } catch (Exception e) {
+            ended = false;
         }
+        if (ended) return;
+
+        // 2) Reflection fallback (older devices / OEM dialers)
         try {
             TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+            if (tm == null) return;
             Class<?> c = Class.forName(tm.getClass().getName());
             Method m = c.getDeclaredMethod("getITelephony");
             m.setAccessible(true);
@@ -567,25 +697,19 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         try {
             if (callStateReceiver != null) {
                 unregisterReceiver(callStateReceiver);
+                callStateReceiver = null;
             }
             callStateReceiver = new android.content.BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     String state = intent.getStringExtra(TelephonyManager.EXTRA_STATE);
                     if (TelephonyManager.EXTRA_STATE_OFFHOOK.equals(state)) {
-                        if (waitingForPickup && pickupDisconnectSec > 0 && !isCallActive) {
-                            isCallActive = true;
-                            final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
-                            final Runnable r = new Runnable() {
-                                @Override
-                                public void run() {
-                                    endCallNow();
-                                }
-                            };
-                            disconnectHandlers.add(h);
-                            disconnectRunnables.add(r);
-                            h.postDelayed(r, pickupDisconnectSec * 1000L);
+                        isCallActive = true;
+                        if (waitingForPickup && pickupDisconnectSec > 0) {
                             waitingForPickup = false;
+                            final int sec = pickupDisconnectSec;
+                            pickupDisconnectSec = 0;
+                            scheduleEndCall(sec);
                         }
                     } else if (TelephonyManager.EXTRA_STATE_IDLE.equals(state)) {
                         // Call ended by either side: reset pickup state only.

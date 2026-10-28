@@ -53,6 +53,11 @@ public class MessageSenderActivity extends AppCompatActivity {
     private android.widget.Spinner countryCodeSpinner;
     private final String[] countryCodes = {"+91", "+1", "+44", "+971", "+61", "+65", "+81", "+49", "+33", "+86", "+92", "+880", "+94", "+977", "+966", "+234", "+27", "+60", "+20", "+7"};
     private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+    /** true when the manual field was filled automatically from the clipboard (not typed by the user). */
+    private boolean autoFilledFromClipboard = false;
+    /** remaining / total counters of the running messaging loop */
+    private int remaining = -1;
+    private int totalMessages = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -98,6 +103,13 @@ public class MessageSenderActivity extends AppCompatActivity {
 
         // select contact click listener
         Button selectContactButton = findViewById(R.id.ms_select_contact);
+        final ActivityResultLauncher<String> requestContactsPermissionLauncher =
+                registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                    if (!isGranted) {
+                        Snackbar.make(findViewById(R.id.ms_select_contact),
+                                "कॉन्टैक्ट पढ़ने की अनुमति ज़रूरी है", Snackbar.LENGTH_LONG).show();
+                    }
+                });
         selectContactButton.setOnClickListener(new View.OnClickListener() {
             final ActivityResultLauncher<Void> getContact = registerForActivityResult(new ActivityResultContracts.PickContact(), uri -> {
                 // Handle the returned Uri
@@ -120,6 +132,11 @@ public class MessageSenderActivity extends AppCompatActivity {
                             if (nameIndex != -1 && numberIndex != -1) {
                                 name = phoneCursor.getString(nameIndex);
                                 number = phoneCursor.getString(numberIndex);
+                                // a picked contact must win over a clipboard-filled number
+                                autoFilledFromClipboard = false;
+                                if (manualNumberEditText != null) {
+                                    manualNumberEditText.setText("");
+                                }
                                 sendMessageButton.setText(getString(R.string.ms_send_message_text, name));
                                 sendMessageButton.setClickable(true);
                                 sendMessageButton.setBackgroundColor(MainActivity.COLOR10_DARK);
@@ -139,12 +156,9 @@ public class MessageSenderActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (ContextCompat.checkSelfPermission(baseContext, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
-                    System.out.println("Already have the permission of " + Manifest.permission.READ_CONTACTS);
                     getContact.launch(null);
-
                 } else {
-                    System.out.println("Asking for permission " + Manifest.permission.READ_CONTACTS);
-                    getContact.launch(null);
+                    requestContactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS);
                 }
             }
         });
@@ -154,74 +168,38 @@ public class MessageSenderActivity extends AppCompatActivity {
                     registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
                         System.out.println("Is message permission granted: [" + isGranted + "]");
                         if (isGranted) {
-                            performRepeatedMessages();
+                            startMessagingFromUi();
                         }
                     });
             @Override
             public void onClick(View v) {
-                if (manualNumberEditText != null && manualNumberEditText.getText() != null) {
+                // Manual number wins ONLY if the user typed it themselves
+                // (clipboard auto-fill must not override a picked contact).
+                boolean userTypedNumber = manualNumberEditText != null
+                        && manualNumberEditText.getText() != null
+                        && !manualNumberEditText.getText().toString().trim().isEmpty()
+                        && !autoFilledFromClipboard;
+                if (userTypedNumber) {
                     String manualNum = manualNumberEditText.getText().toString().trim();
-                    if (!manualNum.isEmpty()) {
-                        String code = (countryCodeSpinner != null && countryCodeSpinner.getSelectedItem() != null) ? countryCodeSpinner.getSelectedItem().toString() : "+91";
-                        if (prefs != null) {
-                            prefs.edit().putString("country_code", code).apply();
-                        }
-                        if (!manualNum.startsWith("+")) {
-                            if (manualNum.startsWith("0")) {
-                                manualNum = manualNum.substring(1);
-                            }
-                            number = code + manualNum;
-                        } else {
-                            number = manualNum;
-                        }
-                        if (name == null || name.isEmpty()) {
-                            name = number;
-                        }
-                        sendMessageButton.setText(getString(R.string.ms_send_message_text, name));
+                    String code = (countryCodeSpinner != null && countryCodeSpinner.getSelectedItem() != null) ? countryCodeSpinner.getSelectedItem().toString() : "+91";
+                    if (prefs != null) {
+                        prefs.edit().putString("country_code", code).apply();
                     }
+                    if (!manualNum.startsWith("+")) {
+                        if (manualNum.startsWith("0")) {
+                            manualNum = manualNum.substring(1);
+                        }
+                        number = code + manualNum;
+                    } else {
+                        number = manualNum;
+                    }
+                    name = number;
+                    sendMessageButton.setText(getString(R.string.ms_send_message_text, name));
                 }
                 templateMessage = enterMessageTextView.getText().toString().trim();
                 if (ContextCompat.checkSelfPermission(baseContext, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
                     System.out.println("Already have the permission " + Manifest.permission.SEND_SMS);
-
-                    if (!templateMessage.isEmpty() && !noOfMessagesTextView.getText().toString().isEmpty() && !messageGapTextView.getText().toString().isEmpty() && (number != null && !number.isEmpty())) {
-                        // Check for random digit string
-                        if (templateMessage.contains(getString(R.string.ms_random_digit))) {
-                            Pattern pattern = Pattern.compile(getString(R.string.ms_random_digit) + "(\\d+)#");
-                            Matcher matcher = pattern.matcher(templateMessage);
-                            randomDigitsSet = null;
-                            while (matcher.find()) {
-                                if (randomDigitsSet == null)
-                                    randomDigitsSet = new HashSet<>();
-                                String digitStr = matcher.group(1);
-                                if (digitStr == null || digitStr.isEmpty() || !Pattern.matches("^\\d+$", digitStr)){
-                                    Snackbar.make(v, "Please provide valid replaceable strings", Snackbar.LENGTH_LONG).show();
-                                    return;
-                                }
-                                randomDigitsSet.add(digitStr);
-                            }
-                        }
-                        // Check for random string string
-                        if (templateMessage.contains(getString(R.string.ms_random_string))) {
-                            Pattern pattern = Pattern.compile(getString(R.string.ms_random_string) + "(\\d+)#");
-                            Matcher matcher = pattern.matcher(templateMessage);
-                            randomStringSet = null;
-                            while (matcher.find()) {
-                                if (randomStringSet == null)
-                                    randomStringSet = new HashSet<>();
-                                String digitStr = matcher.group(1);
-                                if (digitStr == null || digitStr.isEmpty() || !Pattern.matches("^\\d+$", digitStr)){
-                                    Snackbar.make(v, "Please provide valid replaceable strings", Snackbar.LENGTH_LONG).show();
-                                    return;
-                                }
-                                randomStringSet.add(digitStr);
-                            }
-                        }
-                        performRepeatedMessages();
-//                        enterMessageTextView.setEnabled(false);
-                        Snackbar.make(v, "Sending " + noOfMessagesTextView.getText() + " message(s) to " + name + ", after every " + messageGapTextView.getText() + " sec", Snackbar.LENGTH_LONG).show();
-                    } else
-                        Snackbar.make(v, "Please enter required fields", Snackbar.LENGTH_LONG).show();
+                    startMessagingFromUi();
                 } else {
                     System.out.println("Asking for permission " + Manifest.permission.SEND_SMS);
                     requestMessagingPermissionLauncher.launch(Manifest.permission.SEND_SMS);
@@ -230,31 +208,93 @@ public class MessageSenderActivity extends AppCompatActivity {
         });
 
         stopMessagingButton.setOnClickListener(v -> {
-            if(timer != null){
-                timer.cancel();
-//                    enterMessageTextView.setEnabled(true);
-                System.out.println("Cancel messaging");
-                currentNumberOfMessage.setVisibility(View.INVISIBLE);
-                stopMessagingButton.setClickable(false);
-                stopMessagingButton.setBackgroundColor(MainActivity.COLOR30_LIGHT);
+            boolean wasRunning = timer != null;
+            stopMessagingLoop();
+            if (wasRunning) {
                 Snackbar.make(v, "Messaging stopped to " + name, Snackbar.LENGTH_LONG).show();
             }
         });
     }
 
+    /** Validates all fields, prepares random placeholders and starts the loop. */
+    private void startMessagingFromUi() {
+        if (number == null || number.trim().isEmpty()) {
+            Snackbar.make(findViewById(R.id.ms_button_message), "पहले नंबर डालें या कॉन्टैक्ट चुनें", Snackbar.LENGTH_LONG).show();
+            return;
+        }
+        templateMessage = enterMessageTextView == null ? "" : enterMessageTextView.getText().toString().trim();
+        if (templateMessage.isEmpty()) {
+            Snackbar.make(findViewById(R.id.ms_button_message), "मैसेज लिखें", Snackbar.LENGTH_LONG).show();
+            return;
+        }
+        String noTxt = noOfMessagesTextView.getText().toString().trim();
+        String gapTxt = messageGapTextView.getText().toString().trim();
+        if (noTxt.isEmpty() || gapTxt.isEmpty()) {
+            Snackbar.make(findViewById(R.id.ms_button_message), "मैसेज की संख्या और गैप भरें", Snackbar.LENGTH_LONG).show();
+            return;
+        }
+
+        // always reset, otherwise old placeholders leak into the new run
+        randomDigitsSet = null;
+        randomStringSet = null;
+
+        if (templateMessage.contains(getString(R.string.ms_random_digit))) {
+            Pattern pattern = Pattern.compile(getString(R.string.ms_random_digit) + "(\\d+)#");
+            Matcher matcher = pattern.matcher(templateMessage);
+            while (matcher.find()) {
+                if (randomDigitsSet == null) randomDigitsSet = new HashSet<>();
+                String digitStr = matcher.group(1);
+                if (digitStr == null || digitStr.isEmpty() || !Pattern.matches("^\\d+$", digitStr)) {
+                    Snackbar.make(findViewById(R.id.ms_button_message), "Please provide valid replaceable strings", Snackbar.LENGTH_LONG).show();
+                    return;
+                }
+                randomDigitsSet.add(digitStr);
+            }
+        }
+        if (templateMessage.contains(getString(R.string.ms_random_string))) {
+            Pattern pattern = Pattern.compile(getString(R.string.ms_random_string) + "(\\d+)#");
+            Matcher matcher = pattern.matcher(templateMessage);
+            while (matcher.find()) {
+                if (randomStringSet == null) randomStringSet = new HashSet<>();
+                String digitStr = matcher.group(1);
+                if (digitStr == null || digitStr.isEmpty() || !Pattern.matches("^\\d+$", digitStr)) {
+                    Snackbar.make(findViewById(R.id.ms_button_message), "Please provide valid replaceable strings", Snackbar.LENGTH_LONG).show();
+                    return;
+                }
+                randomStringSet.add(digitStr);
+            }
+        }
+
+        performRepeatedMessages();
+        Snackbar.make(findViewById(R.id.ms_button_message), "Sending " + noTxt + " message(s) to " + name + ", after every " + gapTxt + " sec", Snackbar.LENGTH_LONG).show();
+    }
+
     private void performRepeatedMessages() {
+        // never let two loops run at once (also resets remaining/totalMessages)
+        stopMessagingLoop();
+        int parsedMessages = 0;
+        try {
+            parsedMessages = Integer.parseInt(noOfMessagesTextView.getText().toString().trim());
+        } catch (Exception ignored) {
+            parsedMessages = 0;
+        }
+        totalMessages = parsedMessages;
+        remaining = totalMessages;
+        if (totalMessages <= 0) {
+            Snackbar.make(findViewById(R.id.ms_button_message), "मैसेज की संख्या सही डालें", Snackbar.LENGTH_LONG).show();
+            return;
+        }
         stopMessagingButton.setBackgroundColor(MainActivity.COLOR30_DARK);
         stopMessagingButton.setClickable(true);
-        if (timer != null)
-            timer.cancel();
         // Save settings
         try {
             if (prefs != null) {
                 SharedPreferences.Editor editor = prefs.edit();
-                editor.putString("no_of_msgs", noOfMessagesTextView.getText().toString());
-                editor.putString("msg_gap", messageGapTextView.getText().toString());
+                // keys MUST match the ones used when loading in myInit()
+                editor.putString("no_of_messages", noOfMessagesTextView.getText().toString());
+                editor.putString("message_gap", messageGapTextView.getText().toString());
                 if (enterMessageTextView != null && enterMessageTextView.getText() != null) {
-                    editor.putString("message", enterMessageTextView.getText().toString());
+                    editor.putString("message_text", enterMessageTextView.getText().toString());
                 }
                 editor.apply();
             }
@@ -263,9 +303,23 @@ public class MessageSenderActivity extends AppCompatActivity {
         currentNumberOfMessage.setText(getString(R.string.ms_current_no_of_message, 0));
         currentNumberOfMessage.setVisibility(View.VISIBLE);
 
-        timer = new Timer();
-        timer.schedule(new MessageTask(), Constants.AUTOMATIC_MESSAGING_INITIAL_DELAY, Integer.parseInt(messageGapTextView.getText().toString()) * 1000L);
-        Snackbar.make(findViewById(R.id.ms_button_message), "Messaging to " + name + " " + noOfMessagesTextView.getText().toString() + " times after every " + messageGapTextView.getText().toString() + " sec", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+        // gap must be >= 1 second, otherwise Timer.schedule throws IllegalArgumentException
+        long gapSec = 1;
+        try {
+            gapSec = Long.parseLong(messageGapTextView.getText().toString().trim());
+        } catch (Exception ignored) {
+        }
+        if (gapSec < 1) {
+            gapSec = 1;
+            messageGapTextView.setText("1");
+        }
+        try {
+            timer = new Timer();
+            timer.schedule(new MessageTask(), Constants.AUTOMATIC_MESSAGING_INITIAL_DELAY, gapSec * 1000L);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Snackbar.make(findViewById(R.id.ms_button_message), "Messaging शुरू नहीं हो सकी", Snackbar.LENGTH_LONG).show();
+        }
     }
 
     private void myInit() {
@@ -295,6 +349,24 @@ public class MessageSenderActivity extends AppCompatActivity {
         enterMessageTextView = findViewById(R.id.ms_enter_message);
         manualNumberEditText = findViewById(R.id.ms_manual_number);
         countryCodeSpinner = findViewById(R.id.ms_country_code_spinner);
+
+        // Typing a number by hand must win over a clipboard-filled value.
+        if (manualNumberEditText != null) {
+            manualNumberEditText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    autoFilledFromClipboard = false;
+                }
+            });
+        }
 
         prefs = getSharedPreferences("ms_prefs", Context.MODE_PRIVATE);
 
@@ -348,6 +420,8 @@ public class MessageSenderActivity extends AppCompatActivity {
                                     }
                                 }
                                 manualNumberEditText.setText(clipStr);
+                                // set AFTER setText: the TextWatcher resets this flag on every change
+                                autoFilledFromClipboard = true;
                             }
                         }
                     }
@@ -358,8 +432,6 @@ public class MessageSenderActivity extends AppCompatActivity {
     }
 
     class MessageTask extends TimerTask {
-        private int remaining = -1;
-
         @Override
         public void run() {
             // TimerTask runs on a background thread: hop to the main thread before touching UI
@@ -370,12 +442,16 @@ public class MessageSenderActivity extends AppCompatActivity {
             try {
                 if (remaining < 0) {
                     String s = noOfMessagesTextView.getText().toString().trim();
-                    remaining = s.isEmpty() ? 0 : Integer.parseInt(s);
+                    try {
+                        totalMessages = s.isEmpty() ? 0 : Integer.parseInt(s);
+                    } catch (Exception ignored) {
+                        totalMessages = 0;
+                    }
+                    remaining = totalMessages;
                 }
                 if (remaining > 0 && number != null && !number.isEmpty()) {
-                    int total = remaining;
                     currentNumberOfMessage.setText(getString(R.string.ms_current_no_of_message,
-                            (Integer.parseInt(noOfMessagesTextView.getText().toString()) - total + 1)));
+                            (totalMessages - remaining + 1)));
                     remaining--;
 
                     String messageToSend = templateMessage == null ? "" : new String(templateMessage);
@@ -390,7 +466,13 @@ public class MessageSenderActivity extends AppCompatActivity {
                     if (smsManager == null)
                         smsManager = SmsManager.getDefault();
                     try {
-                        smsManager.sendTextMessage(number, null, messageToSend, null, null);
+                        if (messageToSend.length() > 160) {
+                            // long SMS must be split, otherwise sendTextMessage throws / truncates
+                            java.util.ArrayList<String> parts = smsManager.divideMessage(messageToSend);
+                            smsManager.sendMultipartTextMessage(number, null, parts, null, null);
+                        } else {
+                            smsManager.sendTextMessage(number, null, messageToSend, null, null);
+                        }
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -433,6 +515,13 @@ public class MessageSenderActivity extends AppCompatActivity {
             timer.cancel();
             timer = null;
         }
+        try {
+            handler.removeCallbacksAndMessages(null);
+        } catch (Exception ignored) {
+        }
+        // reset the counters so the next run starts from the requested number again
+        remaining = -1;
+        totalMessages = 0;
         try {
             if (stopMessagingButton != null) {
                 stopMessagingButton.setClickable(false);

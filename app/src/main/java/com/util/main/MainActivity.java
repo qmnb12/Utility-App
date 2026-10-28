@@ -16,12 +16,12 @@ import com.util.features.FeatureHubActivity;
 import com.util.messagesender.MessageSenderActivity;
 
 public class MainActivity extends AppCompatActivity {
-    public static int COLOR10_DARK;
-    public static int COLOR10_LIGHT;
-    public static int COLOR30_DARK;
-    public static int COLOR30_LIGHT;
-    public static int COLOR60_DARK;
-    public static int COLOR60_LIGHT;
+    public static int COLOR10_DARK = 0xFF2E7D32;
+    public static int COLOR10_LIGHT = 0xFFA5D6A7;
+    public static int COLOR30_DARK = 0xFFC62828;
+    public static int COLOR30_LIGHT = 0xFFEF9A9A;
+    public static int COLOR60_DARK = 0xFF1565C0;
+    public static int COLOR60_LIGHT = 0xFF90CAF9;
     Context baseContext = null;
 
     @Override
@@ -53,12 +53,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setMainColors() {
-        Resources r = getResources();
-        COLOR10_DARK = r.getColor(R.color.color10_dark, null);
-        COLOR10_LIGHT = r.getColor(R.color.color10_light, null);
-        COLOR30_DARK = r.getColor(R.color.color30_dark, null);
-        COLOR30_LIGHT = r.getColor(R.color.color30_light, null);
-        COLOR60_DARK = r.getColor(R.color.color60_dark, null);
-        COLOR60_LIGHT = r.getColor(R.color.color60_light, null);
+        try {
+            Resources r = getResources();
+            COLOR10_DARK = r.getColor(R.color.color10_dark, null);
+            COLOR10_LIGHT = r.getColor(R.color.color10_light, null);
+            COLOR30_DARK = r.getColor(R.color.color30_dark, null);
+            COLOR30_LIGHT = r.getColor(R.color.color30_light, null);
+            COLOR60_DARK = r.getColor(R.color.color60_dark, null);
+            COLOR60_LIGHT = r.getColor(R.color.color60_light, null);
+        } catch (Exception ignored) {
+            // keep the hardcoded fallbacks so buttons never become invisible
+        }
     }
 }
