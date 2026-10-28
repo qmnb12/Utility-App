@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">UTILITY APP</string>
-    <string name="app_header_default_name">Default</string>
+    <string name="app_header_default_name">Automatic Redialer</string>
     <string name="main_menu_button">Main Menu</string>
 
     <string name="automatic_redialer">Automatic Redialer</string>
@@ -9,11 +9,25 @@
     <string name="ar_max_no_of_calls">500</string>
     <string name="ar_current_no_of_call">Current Number of Call: %1$d</string>
     <string name="ar_number_of_calls">No of Calls</string>
+    <string name="ar_no_of_calls">No of Calls</string>
     <string name="ar_default_no_of_calls">10</string>
     <string name="ar_select_contact">Select Contact</string>
-    <string name="ar_default_call_gap">50</string>
+    <string name="ar_call_gap_label">Call Gap</string>
+    <string name="ar_call_gap">Call Gap</string>
+    <string name="ar_default_call_gap">5</string>
     <string name="ar_max_call_gap">180</string>
-    <string name="ar_call_gap_label">Call Gap (sec)</string>
+    <string name="ar_manual_number_hint">या मैन्युअली नंबर डालें</string>
+    <string name="ar_disconnect_mode">ऑटो डिस्कनेक्ट मोड</string>
+    <string name="ar_mode_off">Off</string>
+    <string name="ar_mode_direct">Direct</string>
+    <string name="ar_mode_pickup">Pickup</string>
+    <string name="ar_disconnect_sec">Disconnect Sec</string>
+    <string name="ar_batch_numbers_label">Batch Numbers</string>
+    <string name="ar_batch_numbers_hint">कॉमा या नई लाइन से अलग कई नंबर डालें\nजैसे: 9810000001, 9810000002</string>
+    <string name="ar_ussd_mode">USSD Mode</string>
+    <string name="ar_run_in_background">ऐप बैकग्राउंड में जाने पर भी कॉलिंग जारी रखें</string>
+    <string name="ar_call">Call</string>
+    <string name="ar_stop">Stop</string>
 
     <string name="message_sender">Message Sender</string>
     <string name="ms_select_contact">Select Contact</string>
@@ -21,13 +35,15 @@
     <string name="ms_default_no_of_message">20</string>
     <string name="ms_max_no_of_message">1000</string>
     <string name="ms_number_of_message">No of Messages</string>
+    <string name="ms_no_of_message">No of Messages</string>
     <string name="ms_default_message_gap">5</string>
     <string name="ms_max_message_gap">300</string>
-    <string name="ms_message_gap_label">Message Gap (sec)</string>
+    <string name="ms_message_gap_label">Message Gap</string>
     <string name="ms_current_no_of_message">Current No of Message: %1$d</string>
     <string name="ms_default_message_text">Message %1s</string>
     <string name="ms_stop_messaging">Stop Messaging</string>
     <string name="ms_enter_message_label">Enter Message</string>
+    <string name="ms_manual_number_hint">या मैन्युअली नंबर डालें</string>
 
     <string name="ms_random_digit">#random_digit</string>
     <string name="ms_random_string">#random_string</string>
