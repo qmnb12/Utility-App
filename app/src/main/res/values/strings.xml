@@ -29,6 +29,29 @@
     <string name="ar_call">Call</string>
     <string name="ar_stop">Stop</string>
 
+    <string-array name="country_codes">
+        <item>+91</item>
+        <item>+1</item>
+        <item>+44</item>
+        <item>+971</item>
+        <item>+61</item>
+        <item>+65</item>
+        <item>+81</item>
+        <item>+49</item>
+        <item>+33</item>
+        <item>+86</item>
+        <item>+92</item>
+        <item>+880</item>
+        <item>+94</item>
+        <item>+977</item>
+        <item>+966</item>
+        <item>+234</item>
+        <item>+27</item>
+        <item>+60</item>
+        <item>+20</item>
+        <item>+7</item>
+    </string-array>
+
     <string name="message_sender">Message Sender</string>
     <string name="ms_select_contact">Select Contact</string>
     <string name="ms_send_message_text">Send to %1s</string>

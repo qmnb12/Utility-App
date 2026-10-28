@@ -54,7 +54,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:entryValues="@array/country_codes"
-                    android:popupBackgroundTint="@color/color10_light" />
+                    android:backgroundTint="@color/color10_light" />
 
                 <EditText
                     android:id="@+id/ar_manual_number"
