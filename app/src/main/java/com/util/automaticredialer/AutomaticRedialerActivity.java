@@ -53,10 +53,12 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private android.widget.RadioGroup disconnectModeGroup;
     private final String[] countryCodes = {"+91", "+1", "+44", "+971", "+61", "+65", "+81", "+49", "+33", "+86", "+92", "+880", "+94", "+977", "+966", "+234", "+27", "+60", "+20", "+7"};
     private android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
-    private Runnable disconnectRunnable = null;
+    private java.util.ArrayList<android.os.Handler> disconnectHandlers = new java.util.ArrayList<>();
+    private java.util.ArrayList<Runnable> disconnectRunnables = new java.util.ArrayList<>();
     private android.content.BroadcastReceiver callStateReceiver = null;
     private boolean isCallActive = false;
     private int pickupDisconnectSec = 0;
+    private boolean waitingForPickup = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -367,9 +369,17 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
 
     private void stopAllDisconnectionInternal() {
         try {
-            if (handler != null && disconnectRunnable != null) {
-                handler.removeCallbacks(disconnectRunnable);
-                disconnectRunnable = null;
+            if (disconnectRunnables != null) {
+                for (int i = 0; i < disconnectRunnables.size(); i++) {
+                    Runnable r = disconnectRunnables.get(i);
+                    if (r != null && handler != null) {
+                        handler.removeCallbacks(r);
+                    }
+                }
+                disconnectRunnables.clear();
+            }
+            if (disconnectHandlers != null) {
+                disconnectHandlers.clear();
             }
         } catch (Exception e) {
         }
@@ -382,6 +392,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         }
         isCallActive = false;
         pickupDisconnectSec = 0;
+        waitingForPickup = false;
     }
 
     private void stopAllDisconnection() {
@@ -400,6 +411,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 startActivity(intent);
                 // Auto disconnect after specified seconds
                 try {
+                    stopAllDisconnectionInternal();
                     int disconnectSec = 0;
                     if (disconnectSecEditText != null && disconnectSecEditText.getText() != null) {
                         String ds = disconnectSecEditText.getText().toString().trim();
@@ -407,24 +419,30 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                             disconnectSec = Integer.parseInt(ds);
                         }
                     }
+                    boolean afterPickup = false;
+                    if (disconnectModeGroup != null) {
+                        int checked = disconnectModeGroup.getCheckedRadioButtonId();
+                        if (checked == R.id.ar_mode_after_pickup) {
+                            afterPickup = true;
+                        }
+                    }
                     if (disconnectSec > 0) {
-                        new Timer().schedule(new TimerTask() {
-                            @Override
-                            public void run() {
-                                try {
-                                    TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-                                    Class<?> c = Class.forName(tm.getClass().getName());
-                                    Method m = c.getDeclaredMethod("getITelephony");
-                                    m.setAccessible(true);
-                                    Object telephonyService = m.invoke(tm);
-                                    Class<?> telephonyInterfaceClass = Class.forName(telephonyService.getClass().getName());
-                                    Method endCallMethod = telephonyInterfaceClass.getDeclaredMethod("endCall");
-                                    endCallMethod.invoke(telephonyService);
-                                } catch (Exception ex) {
-                                    ex.printStackTrace();
+                        if (afterPickup) {
+                            waitingForPickup = true;
+                            pickupDisconnectSec = disconnectSec;
+                            registerCallStateListener();
+                        } else {
+                            final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+                            final Runnable r = new Runnable() {
+                                @Override
+                                public void run() {
+                                    endCallNow();
                                 }
-                            }
-                        }, disconnectSec * 1000L);
+                            };
+                            disconnectHandlers.add(h);
+                            disconnectRunnables.add(r);
+                            h.postDelayed(r, disconnectSec * 1000L);
+                        }
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -436,8 +454,70 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 stopCallingButton.setBackgroundColor(MainActivity.COLOR30_LIGHT);
                 currentNoOfCalls.setVisibility(View.INVISIBLE);
                 Snackbar.make(findViewById(R.id.ar_stop_call), "Calling stopped to " + name, Snackbar.LENGTH_LONG).show();
-                if (timer != null) timer.cancel();
+                stopAllDisconnectionInternal();
+                if (timer != null) { timer.cancel(); timer = null; }
             }
+        }
+    }
+
+    private void endCallNow() {
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                android.telecom.TelecomManager telecomManager = (android.telecom.TelecomManager) getSystemService(Context.TELECOM_SERVICE);
+                if (telecomManager != null && ContextCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS) == PackageManager.PERMISSION_GRANTED) {
+                    telecomManager.endCall();
+                    return;
+                }
+            }
+        } catch (Exception e) {
+        }
+        try {
+            TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+            Class<?> c = Class.forName(tm.getClass().getName());
+            Method m = c.getDeclaredMethod("getITelephony");
+            m.setAccessible(true);
+            Object telephonyService = m.invoke(tm);
+            Class<?> telephonyInterfaceClass = Class.forName(telephonyService.getClass().getName());
+            Method endCallMethod = telephonyInterfaceClass.getDeclaredMethod("endCall");
+            endCallMethod.invoke(telephonyService);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private void registerCallStateListener() {
+        try {
+            if (callStateReceiver != null) {
+                unregisterReceiver(callStateReceiver);
+            }
+            callStateReceiver = new android.content.BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    String state = intent.getStringExtra(TelephonyManager.EXTRA_STATE);
+                    if (TelephonyManager.EXTRA_STATE_OFFHOOK.equals(state)) {
+                        if (waitingForPickup && pickupDisconnectSec > 0 && !isCallActive) {
+                            isCallActive = true;
+                            final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+                            final Runnable r = new Runnable() {
+                                @Override
+                                public void run() {
+                                    endCallNow();
+                                }
+                            };
+                            disconnectHandlers.add(h);
+                            disconnectRunnables.add(r);
+                            h.postDelayed(r, pickupDisconnectSec * 1000L);
+                            waitingForPickup = false;
+                        }
+                    } else if (TelephonyManager.EXTRA_STATE_IDLE.equals(state)) {
+                        stopAllDisconnectionInternal();
+                    }
+                }
+            };
+            android.content.IntentFilter filter = new android.content.IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED);
+            registerReceiver(callStateReceiver, filter);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }
