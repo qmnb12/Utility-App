@@ -49,6 +49,14 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private android.widget.EditText manualNumberEditText = null;
     private android.widget.EditText disconnectSecEditText = null;
     private SharedPreferences prefs;
+    private android.widget.Spiper countryCodeSpinner;
+    private android.widget.RadioGroup disconnectModeGroup;
+    private final String[] countryCodes = {"+91", "+1", "+44", "+971", "+61", "+65", "+81", "+49", "+33", "+86", "+92", "+880", "+94", "+977", "+966", "+234", "+27", "+60", "+20", "+7"};
+    private android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private Runnable disconnectRunnable = null;
+    private android.content.BroadcastReceiver callStateReceiver = null;
+    private boolean isCallActive = false;
+    private int pickupDisconnectSec = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -164,11 +172,42 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
 
             @Override
             public void onClick(View v) {
+                // Save settings
+                try {
+                    if (prefs != null) {
+                        SharedPreferences.Editor editor = prefs.edit();
+                        if (noOfCallsTextView != null && noOfCallsTextView.getText() != null) {
+                            editor.putString("no_of_calls", noOfCallsTextView.getText().toString());
+                        }
+                        if (callGapTextView != null && callGapTextView.getText() != null) {
+                            editor.putString("call_gap", callGapTextView.getText().toString());
+                        }
+                        if (disconnectSecEditText != null && disconnectSecEditText.getText() != null) {
+                            editor.putString("disconnect_sec", disconnectSecEditText.getText().toString());
+                        }
+                        if (disconnectModeGroup != null) {
+                            editor.putInt("disconnect_mode", disconnectModeGroup.getCheckedRadioButtonId());
+                        }
+                        editor.apply();
+                    }
+                } catch (Exception e) {
+                }
                 if (manualNumberEditText != null && manualNumberEditText.getText() != null) {
                     String manualNum = manualNumberEditText.getText().toString().trim();
                     if (!manualNum.isEmpty()) {
-                        number = manualNum;
-                        name = manualNum;
+                        String code = (countryCodeSpinner != null && countryCodeSpinner.getSelectedItem() != null) ? countryCodeSpinner.getSelectedItem().toString() : "+91";
+                        if (prefs != null) {
+                            prefs.edit().putString("country_code", code).apply();
+                        }
+                        if (!manualNum.startsWith("+")) {
+                            if (manualNum.startsWith("0")) {
+                                manualNum = manualNum.substring(1);
+                            }
+                            number = code + manualNum;
+                        } else {
+                            number = manualNum;
+                        }
+                        name = number;
                         callButton.setText(getString(R.string.ar_default_call_text, name));
                     }
                 }
@@ -183,12 +222,14 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         });
 
         stopCallingButton.setOnClickListener(v -> {
+            stopAllDisconnection();
             if (timer != null) {
                 System.out.println("Cancel calling");
                 currentNoOfCalls.setVisibility(View.INVISIBLE);
                 stopCallingButton.setClickable(false);
                 stopCallingButton.setBackgroundColor(MainActivity.COLOR30_LIGHT);
                 timer.cancel();
+                timer = null;
                 Snackbar.make(v, "Calling stopped to " + name, Snackbar.LENGTH_LONG).show();
             }
         });
@@ -215,11 +256,28 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         currentNoOfCalls = findViewById(R.id.ar_current_call_number);
         manualNumberEditText = findViewById(R.id.ar_manual_number);
         disconnectSecEditText = findViewById(R.id.ar_disconnect_sec);
+        countryCodeSpinner = findViewById(R.id.ar_country_code_spinner);
+        disconnectModeGroup = findViewById(R.id.ar_disconnect_mode_group);
+
+        // Setup country code spinner
+        if (countryCodeSpinner != null) {
+            android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, countryCodes);
+            countryCodeSpinner.setAdapter(adapter);
+            String savedCode = prefs.getString("country_code", "+91");
+            for (int i = 0; i < countryCodes.length; i++) {
+                if (countryCodes[i].equals(savedCode)) {
+                    countryCodeSpinner.setSelection(i);
+                    break;
+                }
+            }
+        }
 
         // Load saved settings
         String savedCalls = prefs.getString("no_of_calls", null);
         String savedGap = prefs.getString("call_gap", null);
-        String savedDisconnect = prefs.getString("disconnect_sec", "0");
+        String savedDisconnect = prefs.getString("disconnect_sec", "5");
+        int savedMode = prefs.getInt("disconnect_mode", R.id.ar_mode_off);
+
         if (savedCalls != null && !savedCalls.isEmpty()) {
             noOfCallsTextView.setText(savedCalls);
         }
@@ -229,21 +287,37 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         if (disconnectSecEditText != null && savedDisconnect != null) {
             disconnectSecEditText.setText(savedDisconnect);
         }
+        if (disconnectModeGroup != null) {
+            if (disconnectModeGroup.findViewById(savedMode) != null) {
+                disconnectModeGroup.check(savedMode);
+            }
+        }
 
         // Clipboard auto fill
         try {
             ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             if (clipboard != null && clipboard.hasPrimaryClip()) {
                 ClipData clip = clipboard.getPrimaryClip();
-                if (clip != null && clip.getItemCount() > 0) {
-                    CharSequence text = clip.getItemAt(0).getText();
-                    if (text != null) {
-                        String clipStr = text.toString().trim().replaceAll("[^0-9+]", "");
-                        if (!clipStr.isEmpty() && clipStr.length() >= 7 && manualNumberEditText != null && manualNumberEditText.getText().toString().trim().isEmpty()) {
-                            manualNumberEditText.setText(clipStr);
+                    if (clip != null && clip.getItemCount() > 0) {
+                        CharSequence text = clip.getItemAt(0).getText();
+                        if (text != null) {
+                            String clipStr = text.toString().trim().replaceAll("[^0-9+]", "");
+                            if (!clipStr.isEmpty() && clipStr.length() >= 7 && manualNumberEditText != null && manualNumberEditText.getText().toString().trim().isEmpty()) {
+                                if (clipStr.startsWith("+")) {
+                                    for (int i = 0; i < countryCodes.length; i++) {
+                                        if (clipStr.startsWith(countryCodes[i])) {
+                                            if (countryCodeSpinner != null) {
+                                                countryCodeSpinner.setSelection(i);
+                                            }
+                                            clipStr = clipStr.substring(countryCodes[i].length());
+                                            break;
+                                        }
+                                    }
+                                }
+                                manualNumberEditText.setText(clipStr);
+                            }
                         }
                     }
-                }
             }
         } catch (Exception e) {
             // ignore
@@ -270,6 +344,13 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 editor.apply();
             }
         } catch (Exception e) {
+        }
+        if (prefs != null) {
+            SharedPreferences.Editor editor = prefs.edit();
+            if (noOfCallsTextView != null) editor.putString("no_of_calls", noOfCallsTextView.getText().toString());
+            if (callGapTextView != null) editor.putString("call_gap", callGapTextView.getText().toString());
+            if (disconnectSecEditText != null) editor.putString("disconnect_sec", disconnectSecEditText.getText().toString());
+            editor.apply();
         }
         currentNoOfCalls.setText(getString(R.string.ar_current_no_of_call, 0));
         currentNoOfCalls.setVisibility(View.VISIBLE);

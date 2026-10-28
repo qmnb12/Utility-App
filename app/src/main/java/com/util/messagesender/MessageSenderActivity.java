@@ -50,6 +50,8 @@ public class MessageSenderActivity extends AppCompatActivity {
     private TextView enterMessageTextView;
     private android.widget.EditText manualNumberEditText;
     private SharedPreferences prefs;
+    private android.widget.Spinner countryCodeSpinner;
+    private final String[] countryCodes = {"+91", "+1", "+44", "+971", "+61", "+65", "+81", "+49", "+33", "+86", "+92", "+880", "+94", "+977", "+966", "+234", "+27", "+60", "+20", "+7"};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -159,9 +161,20 @@ public class MessageSenderActivity extends AppCompatActivity {
                 if (manualNumberEditText != null && manualNumberEditText.getText() != null) {
                     String manualNum = manualNumberEditText.getText().toString().trim();
                     if (!manualNum.isEmpty()) {
-                        number = manualNum;
+                        String code = (countryCodeSpinner != null && countryCodeSpinner.getSelectedItem() != null) ? countryCodeSpinner.getSelectedItem().toString() : "+91";
+                        if (prefs != null) {
+                            prefs.edit().putString("country_code", code).apply();
+                        }
+                        if (!manualNum.startsWith("+")) {
+                            if (manualNum.startsWith("0")) {
+                                manualNum = manualNum.substring(1);
+                            }
+                            number = code + manualNum;
+                        } else {
+                            number = manualNum;
+                        }
                         if (name == null || name.isEmpty()) {
-                            name = manualNum;
+                            name = number;
                         }
                         sendMessageButton.setText(getString(R.string.ms_send_message_text, name));
                     }
@@ -246,6 +259,13 @@ public class MessageSenderActivity extends AppCompatActivity {
             }
         } catch (Exception e) {
         }
+        if (prefs != null) {
+            SharedPreferences.Editor editor = prefs.edit();
+            if (noOfMessagesTextView != null) editor.putString("no_of_messages", noOfMessagesTextView.getText().toString());
+            if (messageGapTextView != null) editor.putString("message_gap", messageGapTextView.getText().toString());
+            if (enterMessageTextView != null) editor.putString("message_text", enterMessageTextView.getText().toString());
+            editor.apply();
+        }
         currentNumberOfMessage.setText(getString(R.string.ms_current_no_of_message, 0));
         currentNumberOfMessage.setVisibility(View.VISIBLE);
 
@@ -280,6 +300,34 @@ public class MessageSenderActivity extends AppCompatActivity {
         smsManager = SmsManager.getDefault();
         enterMessageTextView = findViewById(R.id.ms_enter_message);
         manualNumberEditText = findViewById(R.id.ms_manual_number);
+        countryCodeSpinner = findViewById(R.id.ms_country_code_spinner);
+
+        prefs = getSharedPreferences("ms_prefs", Context.MODE_PRIVATE);
+
+        if (countryCodeSpinner != null) {
+            android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, countryCodes);
+            countryCodeSpinner.setAdapter(adapter);
+            String savedCode = prefs.getString("country_code", "+91");
+            for (int i = 0; i < countryCodes.length; i++) {
+                if (countryCodes[i].equals(savedCode)) {
+                    countryCodeSpinner.setSelection(i);
+                    break;
+                }
+            }
+        }
+
+        String savedNo = prefs.getString("no_of_messages", null);
+        String savedGap = prefs.getString("message_gap", null);
+        String savedMsg = prefs.getString("message_text", null);
+        if (savedNo != null && !savedNo.isEmpty()) {
+            noOfMessagesTextView.setText(savedNo);
+        }
+        if (savedGap != null && !savedGap.isEmpty()) {
+            messageGapTextView.setText(savedGap);
+        }
+        if (savedMsg != null && enterMessageTextView != null) {
+            enterMessageTextView.setText(savedMsg);
+        }
 
         // Load saved settings
         String savedMsgs = prefs.getString("no_of_msgs", null);
@@ -300,15 +348,26 @@ public class MessageSenderActivity extends AppCompatActivity {
             ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             if (clipboard != null && clipboard.hasPrimaryClip()) {
                 ClipData clip = clipboard.getPrimaryClip();
-                if (clip != null && clip.getItemCount() > 0) {
-                    CharSequence text = clip.getItemAt(0).getText();
-                    if (text != null) {
-                        String clipStr = text.toString().trim().replaceAll("[^0-9+]", "");
-                        if (!clipStr.isEmpty() && clipStr.length() >= 7 && manualNumberEditText != null && manualNumberEditText.getText().toString().trim().isEmpty()) {
-                            manualNumberEditText.setText(clipStr);
+                    if (clip != null && clip.getItemCount() > 0) {
+                        CharSequence text = clip.getItemAt(0).getText();
+                        if (text != null) {
+                            String clipStr = text.toString().trim().replaceAll("[^0-9+]", "");
+                            if (!clipStr.isEmpty() && clipStr.length() >= 7 && manualNumberEditText != null && manualNumberEditText.getText().toString().trim().isEmpty()) {
+                                if (clipStr.startsWith("+")) {
+                                    for (int i = 0; i < countryCodes.length; i++) {
+                                        if (clipStr.startsWith(countryCodes[i])) {
+                                            if (countryCodeSpinner != null) {
+                                                countryCodeSpinner.setSelection(i);
+                                            }
+                                            clipStr = clipStr.substring(countryCodes[i].length());
+                                            break;
+                                        }
+                                    }
+                                }
+                                manualNumberEditText.setText(clipStr);
+                            }
                         }
                     }
-                }
             }
         } catch (Exception e) {
             // ignore

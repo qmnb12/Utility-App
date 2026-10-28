@@ -39,23 +39,38 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_bias="0.148" />
 
-        <EditText
-            android:id="@+id/ms_manual_number"
+        <LinearLayout
+            android:id="@+id/ms_manual_layout"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginTop="8dp"
             android:layout_marginEnd="16dp"
-            android:hint="या मैन्युअली नंबर डालें"
-            android:inputType="phone"
-            android:maxLength="15"
-            android:padding="12dp"
-            android:textColor="@android:color/black"
-            android:textColorHint="#666666"
-            android:textSize="16sp"
+            android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ms_select_contact" />
+            app:layout_constraintTop_toBottomOf="@+id/ms_select_contact">
+
+            <Spinner
+                android:id="@+id/ms_country_code_spinner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="10dp"
+                android:spinnerMode="dropdown" />
+
+            <EditText
+                android:id="@+id/ms_manual_number"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="या मैन्युअली नंबर डालें"
+                android:inputType="phone"
+                android:maxLength="15"
+                android:padding="12dp"
+                android:textColor="@android:color/black"
+                android:textColorHint="#666666"
+                android:textSize="16sp" />
+        </LinearLayout>
 
         <EditText
             android:id="@+id/ms_no_of_message"
@@ -71,7 +86,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.85"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ms_manual_number" />
+            app:layout_constraintTop_toBottomOf="@+id/ms_manual_layout" />
 
         <TextView
             android:id="@+id/ms_no_of_message_label"
