@@ -49,7 +49,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private android.widget.EditText manualNumberEditText = null;
     private android.widget.EditText disconnectSecEditText = null;
     private SharedPreferences prefs;
-    private android.widget.Spiper countryCodeSpinner;
+    private android.widget.Spinner countryCodeSpinner;
     private android.widget.RadioGroup disconnectModeGroup;
     private final String[] countryCodes = {"+91", "+1", "+44", "+971", "+61", "+65", "+81", "+49", "+33", "+86", "+92", "+880", "+94", "+977", "+966", "+234", "+27", "+60", "+20", "+7"};
     private android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -222,7 +222,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         });
 
         stopCallingButton.setOnClickListener(v -> {
-            stopAllDisconnection();
+            stopAllDisconnectionInternal();
             if (timer != null) {
                 System.out.println("Cancel calling");
                 currentNoOfCalls.setVisibility(View.INVISIBLE);
@@ -275,8 +275,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         // Load saved settings
         String savedCalls = prefs.getString("no_of_calls", null);
         String savedGap = prefs.getString("call_gap", null);
-        String savedDisconnect = prefs.getString("disconnect_sec", "5");
-        int savedMode = prefs.getInt("disconnect_mode", R.id.ar_mode_off);
+        String savedDisconnect = prefs.getString("disconnect_sec", "0");
 
         if (savedCalls != null && !savedCalls.isEmpty()) {
             noOfCallsTextView.setText(savedCalls);
@@ -286,6 +285,12 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         }
         if (disconnectSecEditText != null && savedDisconnect != null) {
             disconnectSecEditText.setText(savedDisconnect);
+        }
+        int savedMode = prefs.getInt("disconnect_mode", -1);
+        if (disconnectModeGroup != null && savedMode != -1) {
+            if (disconnectModeGroup.findViewById(savedMode) != null) {
+                disconnectModeGroup.check(savedMode);
+            }
         }
         if (disconnectModeGroup != null) {
             if (disconnectModeGroup.findViewById(savedMode) != null) {
@@ -358,6 +363,29 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         timer.schedule(new AutomaticRedialerActivity.CallTask(), Constants.AUTOMATIC_REDIALER_INITIAL_DELAY, Integer.parseInt(callGapTextView.getText().toString()) * 1000L);
         Snackbar.make(findViewById(R.id.ar_button_call), "Calling to " + name + " " + noOfCallsTextView.getText().toString() + " times after every " + callGapTextView.getText().toString() + " sec", Snackbar.LENGTH_LONG).setAction("Action", null).show();
         }
+    }
+
+    private void stopAllDisconnectionInternal() {
+        try {
+            if (handler != null && disconnectRunnable != null) {
+                handler.removeCallbacks(disconnectRunnable);
+                disconnectRunnable = null;
+            }
+        } catch (Exception e) {
+        }
+        try {
+            if (callStateReceiver != null) {
+                unregisterReceiver(callStateReceiver);
+                callStateReceiver = null;
+            }
+        } catch (Exception e) {
+        }
+        isCallActive = false;
+        pickupDisconnectSec = 0;
+    }
+
+    private void stopAllDisconnection() {
+        stopAllDisconnectionInternal();
     }
 
     class CallTask extends TimerTask {

@@ -330,18 +330,7 @@ public class MessageSenderActivity extends AppCompatActivity {
         }
 
         // Load saved settings
-        String savedMsgs = prefs.getString("no_of_msgs", null);
-        String savedGap = prefs.getString("msg_gap", null);
-        String savedMsg = prefs.getString("message", null);
-        if (savedMsgs != null && !savedMsgs.isEmpty()) {
-            noOfMessagesTextView.setText(savedMsgs);
-        }
-        if (savedGap != null && !savedGap.isEmpty()) {
-            messageGapTextView.setText(savedGap);
-        }
-        if (savedMsg != null && enterMessageTextView != null) {
-            enterMessageTextView.setText(savedMsg);
-        }
+        // keep old keys compatibility not needed; new keys loaded above
 
         // Clipboard auto fill
         try {
