@@ -144,6 +144,40 @@
                 app:layout_constraintTop_toBottomOf="@+id/ar_no_of_calls" />
 
             <TextView
+                android:id="@+id/ar_batch_numbers_label"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="14dp"
+                android:layout_marginEnd="16dp"
+                android:text="Batch Numbers (छूटे/कॉमा से अलग)"
+                android:textColor="@android:color/black"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ar_call_gap" />
+
+            <EditText
+                android:id="@+id/ar_batch_numbers"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginEnd="16dp"
+                android:autofillHints="Batch Numbers"
+                android:gravity="top|start"
+                android:hint="9810000001, 9810000002, 9810000003"
+                android:inputType="phone"
+                android:minLines="2"
+                android:padding="10dp"
+                android:textColor="@android:color/black"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ar_batch_numbers_label" />
+
+            <TextView
                 android:id="@+id/ar_disconnect_mode_label"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -156,7 +190,7 @@
                 android:textStyle="bold"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/ar_call_gap" />
+                app:layout_constraintTop_toBottomOf="@+id/ar_batch_numbers" />
 
             <RadioGroup
                 android:id="@+id/ar_disconnect_mode_group"
@@ -258,6 +292,21 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/ar_hint_disconnect" />
+
+            <CheckBox
+                android:id="@+id/ar_ussd_mode"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginEnd="16dp"
+                android:text="USSD Mode (नेटवर्क कोड डालें, जैसे *123#)"
+                android:textColor="@android:color/black"
+                android:textSize="14sp"
+                android:checked="false"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ar_run_in_background" />
 
             <TextView
                 android:id="@+id/ar_current_call_number"

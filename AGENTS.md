@@ -12,6 +12,14 @@
 - Auto disconnect needs `ANSWER_PHONE_CALLS` (Android 9+); `TelecomManager.endCall()` first, ITelephony
   reflection as fallback. Some OEM ROMs still block it.
 - SharedPreferences keys must match between save and load: redialer `no_of_calls`/`call_gap`/`disconnect_sec`/
-  `disconnect_mode`/`country_code`; sender `no_of_messages`/`message_gap`/`message_text`/`country_code`.
+  `disconnect_mode`/`country_code`/`ussd_mode`/`batch_numbers`; sender `no_of_messages`/`message_gap`/`message_text`/`country_code`.
 - Timer gaps are clamped to >= 1 s (Timer.schedule throws on 0).
 - SMS longer than 160 chars is sent with `sendMultipartTextMessage`.
+
+## New features added (this session)
+- **USSD Mode checkbox** (`ar_ussd_mode`): when checked, dials USSD codes like `*123#` using the same
+  `Intent.ACTION_CALL` tel: URI. Saved as `ussd_mode` boolean in prefs.
+- **Batch Numbers EditText** (`ar_batch_numbers`): comma or newline separated numbers (e.g.
+  `9810000001, 9810000002`). Parsed into `batchNumbers` ArrayList; loop iterates through them.
+  Saved as `batch_numbers` string in prefs. When empty, single-number mode is used.
+- CallTask advances `batchIndex` after each call and wraps around when the list is exhausted.

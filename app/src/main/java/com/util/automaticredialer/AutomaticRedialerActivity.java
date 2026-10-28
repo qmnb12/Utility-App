@@ -48,6 +48,8 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private TextView callGapTextView = null;
     private android.widget.EditText manualNumberEditText = null;
     private android.widget.EditText disconnectSecEditText = null;
+    private android.widget.EditText batchNumbersEditText = null;
+    private android.widget.CheckBox ussdModeCheckBox = null;
     private SharedPreferences prefs;
     private android.widget.Spinner countryCodeSpinner;
     private android.widget.RadioGroup disconnectModeGroup;
@@ -65,6 +67,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private int totalCalls = 0;
     /** remaining calls in current loop */
     private int remaining = -1;
+    /** batch number list (parsed from ar_batch_numbers) — empty means single-number mode */
+    private java.util.ArrayList<String> batchNumbers = null;
+    /** current index into batchNumbers */
+    private int batchIndex = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -302,6 +308,23 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                     prefs.edit().putBoolean("run_in_background", checked).apply());
         }
 
+        // USSD Mode checkbox
+        ussdModeCheckBox = findViewById(R.id.ar_ussd_mode);
+        if (ussdModeCheckBox != null) {
+            ussdModeCheckBox.setChecked(prefs.getBoolean("ussd_mode", false));
+            ussdModeCheckBox.setOnCheckedChangeListener((btn, checked) ->
+                    prefs.edit().putBoolean("ussd_mode", checked).apply());
+        }
+
+        // Batch Numbers edit text
+        batchNumbersEditText = findViewById(R.id.ar_batch_numbers);
+        if (batchNumbersEditText != null) {
+            String savedBatch = prefs.getString("batch_numbers", "");
+            if (!savedBatch.isEmpty()) {
+                batchNumbersEditText.setText(savedBatch);
+            }
+        }
+
         // Manual number typed -> enable the call button right away
         if (manualNumberEditText != null) {
             manualNumberEditText.addTextChangedListener(new TextWatcher() {
@@ -398,10 +421,44 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     }
 
     private void performRepeatedCalls() {
-        if (number == null || number.trim().isEmpty()) {
+        // Parse batch numbers if provided
+        batchNumbers = null;
+        batchIndex = 0;
+        if (batchNumbersEditText != null) {
+            String batchText = batchNumbersEditText.getText().toString().trim();
+            if (!batchText.isEmpty()) {
+                // Save batch numbers to prefs
+                prefs.edit().putString("batch_numbers", batchText).apply();
+                // Parse comma or newline separated numbers
+                String[] parts = batchText.split("[,\\n]+");
+                batchNumbers = new java.util.ArrayList<>();
+                for (String part : parts) {
+                    String num = part.trim().replaceAll("[^0-9+]", "");
+                    if (!num.isEmpty() && num.length() >= 4) {
+                        // Apply country code if needed
+                        if (!num.startsWith("+") && countryCodeSpinner != null) {
+                            String cc = countryCodes[countryCodeSpinner.getSelectedItemPosition()];
+                            num = cc + num;
+                        }
+                        batchNumbers.add(num);
+                    }
+                }
+            }
+        }
+
+        // Determine the number to call
+        String numToCall = null;
+        if (batchNumbers != null && !batchNumbers.isEmpty()) {
+            numToCall = batchNumbers.get(0);
+        } else if (number != null && !number.trim().isEmpty()) {
+            numToCall = number.trim();
+        }
+
+        if (numToCall == null || numToCall.isEmpty()) {
             Snackbar.make(findViewById(R.id.ar_button_call), "पहले नंबर डालें या कॉन्टैक्ट चुनें", Snackbar.LENGTH_LONG).show();
             return;
         }
+
         String callsTxt = noOfCallsTextView.getText().toString().trim();
         if (callsTxt.isEmpty()) {
             noOfCallsTextView.setText(R.string.ar_default_no_of_calls);
@@ -448,7 +505,9 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             Snackbar.make(findViewById(R.id.ar_button_call), "कॉलिंग शुरू नहीं हो सकी", Snackbar.LENGTH_LONG).show();
             return;
         }
-        Snackbar.make(findViewById(R.id.ar_button_call), "Calling to " + name + " " + callsTxt + " times after every " + gapSec + " sec", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+        boolean ussdMode = ussdModeCheckBox != null && ussdModeCheckBox.isChecked();
+        String modeStr = ussdMode ? " (USSD)" : "";
+        Snackbar.make(findViewById(R.id.ar_button_call), "Calling to " + name + " " + callsTxt + " times after every " + gapSec + " sec" + modeStr, Snackbar.LENGTH_LONG).setAction("Action", null).show();
     }
 
     /**
@@ -505,7 +564,24 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                     }
                     remaining = totalCalls;
                 }
-                if (remaining > 0 && number != null && !number.isEmpty()) {
+
+                // Determine the number to call for this step
+                String numToCall = null;
+                if (batchNumbers != null && !batchNumbers.isEmpty()) {
+                    if (batchIndex < batchNumbers.size()) {
+                        numToCall = batchNumbers.get(batchIndex);
+                    } else {
+                        // Batch exhausted, reset index or finish
+                        batchIndex = 0;
+                        if (!batchNumbers.isEmpty()) {
+                            numToCall = batchNumbers.get(0);
+                        }
+                    }
+                } else {
+                    numToCall = number;
+                }
+
+                if (remaining > 0 && numToCall != null && !numToCall.isEmpty()) {
                     currentNoOfCalls.setText(getString(R.string.ar_current_no_of_call,
                             (totalCalls - remaining + 1)));
                     remaining--;
@@ -514,12 +590,23 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                     clearDisconnectScheduling();
 
                     try {
-                        Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + number));
+                        boolean ussdMode = ussdModeCheckBox != null && ussdModeCheckBox.isChecked();
+                        String dialUri = "tel:" + numToCall;
+                        // For USSD, the * and # characters are preserved in the URI
+                        Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse(dialUri));
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         startActivity(intent);
                     } catch (Exception e) {
                         e.printStackTrace();
                         return;
+                    }
+
+                    // Advance batch index for next iteration
+                    if (batchNumbers != null && !batchNumbers.isEmpty()) {
+                        batchIndex++;
+                        if (batchIndex >= batchNumbers.size()) {
+                            batchIndex = 0; // wrap around
+                        }
                     }
 
                     scheduleDisconnect();
@@ -648,9 +735,11 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             handler.removeCallbacksAndMessages(null);
         } catch (Exception ignored) {
         }
-        // reset the counter so the next run starts from the requested number again
+        // reset the counters and batch index so the next run starts from the requested number again
         remaining = -1;
         totalCalls = 0;
+        batchIndex = 0;
+        batchNumbers = null;
         try {
             if (stopCallingButton != null) {
                 stopCallingButton.setClickable(false);
