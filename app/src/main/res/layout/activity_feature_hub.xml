@@ -27,8 +27,12 @@
         <Button android:id="@+id/feature_multi_sms" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Multiple Recipients • SMS" />
         <Button android:id="@+id/feature_schedule" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Schedule SMS / Reminder" />
         <Button android:id="@+id/feature_history" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Call / SMS Activity History" />
+        <Button android:id="@+id/feature_direct_dial" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Direct Dial" />
+        <Button android:id="@+id/feature_clipboard_dial" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Dial from Clipboard" />
+        <Button android:id="@+id/feature_device_info" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Device Info" />
         <Button android:id="@+id/feature_backup" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Backup / Restore JSON" />
         <Button android:id="@+id/feature_theme" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Appearance / Theme" />
+        <Button android:id="@+id/feature_clear_data" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Clear All Data" />
         <Button android:id="@+id/feature_call_timer" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Call Duration Control Info" />
         <Button android:id="@+id/feature_back" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Back" />
     </LinearLayout>

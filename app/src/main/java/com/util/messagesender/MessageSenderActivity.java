@@ -1,8 +1,11 @@
 package com.util.messagesender;
 
 import android.Manifest;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.os.Bundle;
@@ -11,20 +14,18 @@ import android.telephony.SmsManager;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
-
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-
 import com.google.android.material.snackbar.Snackbar;
 import com.util.R;
 import com.util.main.MainActivity;
 import com.util.util.Common;
 import com.util.util.Constants;
-
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Timer;
@@ -48,6 +49,7 @@ public class MessageSenderActivity extends AppCompatActivity {
     private String templateMessage;
     private TextView enterMessageTextView;
     private android.widget.EditText manualNumberEditText;
+    private SharedPreferences prefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -231,8 +233,22 @@ public class MessageSenderActivity extends AppCompatActivity {
         stopMessagingButton.setClickable(true);
         if (timer != null)
             timer.cancel();
+        // Save settings
+        try {
+            if (prefs != null) {
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putString("no_of_msgs", noOfMessagesTextView.getText().toString());
+                editor.putString("msg_gap", messageGapTextView.getText().toString());
+                if (enterMessageTextView != null && enterMessageTextView.getText() != null) {
+                    editor.putString("message", enterMessageTextView.getText().toString());
+                }
+                editor.apply();
+            }
+        } catch (Exception e) {
+        }
         currentNumberOfMessage.setText(getString(R.string.ms_current_no_of_message, 0));
         currentNumberOfMessage.setVisibility(View.VISIBLE);
+
         timer = new Timer();
         timer.schedule(new MessageTask(), Constants.AUTOMATIC_MESSAGING_INITIAL_DELAY, Integer.parseInt(messageGapTextView.getText().toString()) * 1000L);
         Snackbar.make(findViewById(R.id.ms_button_message), "Messaging to " + name + " " + noOfMessagesTextView.getText().toString() + " times after every " + messageGapTextView.getText().toString() + " sec", Snackbar.LENGTH_LONG).setAction("Action", null).show();
@@ -240,7 +256,9 @@ public class MessageSenderActivity extends AppCompatActivity {
 
     private void myInit() {
         setContentView(R.layout.activity_message_sender);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         baseContext = getBaseContext();
+        prefs = getSharedPreferences("ms_prefs", Context.MODE_PRIVATE);
 
         // Header
         TextView headerTxt = findViewById(R.id.app_header);
@@ -258,8 +276,43 @@ public class MessageSenderActivity extends AppCompatActivity {
         noOfMessagesTextView = findViewById(R.id.ms_no_of_message);
         messageGapTextView = findViewById(R.id.ms_message_gap);
         stopMessagingButton = findViewById(R.id.ms_stop_message);
+        stopMessagingButton.setClickable(false);
+        smsManager = SmsManager.getDefault();
         enterMessageTextView = findViewById(R.id.ms_enter_message);
         manualNumberEditText = findViewById(R.id.ms_manual_number);
+
+        // Load saved settings
+        String savedMsgs = prefs.getString("no_of_msgs", null);
+        String savedGap = prefs.getString("msg_gap", null);
+        String savedMsg = prefs.getString("message", null);
+        if (savedMsgs != null && !savedMsgs.isEmpty()) {
+            noOfMessagesTextView.setText(savedMsgs);
+        }
+        if (savedGap != null && !savedGap.isEmpty()) {
+            messageGapTextView.setText(savedGap);
+        }
+        if (savedMsg != null && enterMessageTextView != null) {
+            enterMessageTextView.setText(savedMsg);
+        }
+
+        // Clipboard auto fill
+        try {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (clipboard != null && clipboard.hasPrimaryClip()) {
+                ClipData clip = clipboard.getPrimaryClip();
+                if (clip != null && clip.getItemCount() > 0) {
+                    CharSequence text = clip.getItemAt(0).getText();
+                    if (text != null) {
+                        String clipStr = text.toString().trim().replaceAll("[^0-9+]", "");
+                        if (!clipStr.isEmpty() && clipStr.length() >= 7 && manualNumberEditText != null && manualNumberEditText.getText().toString().trim().isEmpty()) {
+                            manualNumberEditText.setText(clipStr);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // ignore
+        }
     }
 
     class MessageTask extends TimerTask {

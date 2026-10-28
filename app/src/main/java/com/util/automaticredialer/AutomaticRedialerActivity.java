@@ -1,8 +1,11 @@
 package com.util.automaticredialer;
 
 import android.Manifest;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
@@ -12,6 +15,7 @@ import android.telephony.TelephonyManager;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -26,8 +30,11 @@ import com.util.databinding.ActivityAutomaticRedialerBinding;
 import com.util.main.MainActivity;
 import com.util.util.Constants;
 
+import java.lang.reflect.Method;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class AutomaticRedialerActivity extends AppCompatActivity {
 
@@ -40,6 +47,8 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private TextView currentNoOfCalls = null;
     private TextView callGapTextView = null;
     private android.widget.EditText manualNumberEditText = null;
+    private android.widget.EditText disconnectSecEditText = null;
+    private SharedPreferences prefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -189,7 +198,9 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         ActivityAutomaticRedialerBinding binding = ActivityAutomaticRedialerBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         baseContext = getBaseContext();
+        prefs = getSharedPreferences("ar_prefs", Context.MODE_PRIVATE);
 
         // Header
         TextView headerTxt = findViewById(R.id.app_header);
@@ -203,21 +214,68 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         callGapTextView = findViewById(R.id.ar_call_gap);
         currentNoOfCalls = findViewById(R.id.ar_current_call_number);
         manualNumberEditText = findViewById(R.id.ar_manual_number);
+        disconnectSecEditText = findViewById(R.id.ar_disconnect_sec);
+
+        // Load saved settings
+        String savedCalls = prefs.getString("no_of_calls", null);
+        String savedGap = prefs.getString("call_gap", null);
+        String savedDisconnect = prefs.getString("disconnect_sec", "0");
+        if (savedCalls != null && !savedCalls.isEmpty()) {
+            noOfCallsTextView.setText(savedCalls);
+        }
+        if (savedGap != null && !savedGap.isEmpty()) {
+            callGapTextView.setText(savedGap);
+        }
+        if (disconnectSecEditText != null && savedDisconnect != null) {
+            disconnectSecEditText.setText(savedDisconnect);
+        }
+
+        // Clipboard auto fill
+        try {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (clipboard != null && clipboard.hasPrimaryClip()) {
+                ClipData clip = clipboard.getPrimaryClip();
+                if (clip != null && clip.getItemCount() > 0) {
+                    CharSequence text = clip.getItemAt(0).getText();
+                    if (text != null) {
+                        String clipStr = text.toString().trim().replaceAll("[^0-9+]", "");
+                        if (!clipStr.isEmpty() && clipStr.length() >= 7 && manualNumberEditText != null && manualNumberEditText.getText().toString().trim().isEmpty()) {
+                            manualNumberEditText.setText(clipStr);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // ignore
+        }
     }
 
     private void performRepeatedCalls() {
         if (!noOfCallsTextView.getText().toString().isEmpty() && number != null && !number.isEmpty()) {
             stopCallingButton.setBackgroundColor(MainActivity.COLOR30_DARK);
             stopCallingButton.setClickable(true);
-            if (timer != null)
-                timer.cancel();
-            if (callGapTextView.getText().toString().isEmpty())
-                callGapTextView.setText(R.string.ar_default_call_gap);
-            currentNoOfCalls.setText(getString(R.string.ar_current_no_of_call, 0));
-            currentNoOfCalls.setVisibility(View.VISIBLE);
-            timer = new Timer();
-            timer.schedule(new AutomaticRedialerActivity.CallTask(), Constants.AUTOMATIC_REDIALER_INITIAL_DELAY, Integer.parseInt(callGapTextView.getText().toString()) * 1000L);
-            Snackbar.make(findViewById(R.id.ar_button_call), "Calling to " + name + " " + noOfCallsTextView.getText().toString() + " times after every " + callGapTextView.getText().toString() + " sec", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+        if (timer != null)
+            timer.cancel();
+        if (callGapTextView.getText().toString().isEmpty())
+            callGapTextView.setText(R.string.ar_default_call_gap);
+        // Save settings
+        try {
+            if (prefs != null) {
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putString("no_of_calls", noOfCallsTextView.getText().toString());
+                editor.putString("call_gap", callGapTextView.getText().toString());
+                if (disconnectSecEditText != null && disconnectSecEditText.getText() != null) {
+                    editor.putString("disconnect_sec", disconnectSecEditText.getText().toString());
+                }
+                editor.apply();
+            }
+        } catch (Exception e) {
+        }
+        currentNoOfCalls.setText(getString(R.string.ar_current_no_of_call, 0));
+        currentNoOfCalls.setVisibility(View.VISIBLE);
+        timer = new Timer();
+        timer.schedule(new AutomaticRedialerActivity.CallTask(), Constants.AUTOMATIC_REDIALER_INITIAL_DELAY, Integer.parseInt(callGapTextView.getText().toString()) * 1000L);
+        Snackbar.make(findViewById(R.id.ar_button_call), "Calling to " + name + " " + noOfCallsTextView.getText().toString() + " times after every " + callGapTextView.getText().toString() + " sec", Snackbar.LENGTH_LONG).setAction("Action", null).show();
         }
     }
 
@@ -231,6 +289,37 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
                 System.out.println("is Telephony Enabled: " + (telephonyManager != null && telephonyManager.getSimState() == TelephonyManager.SIM_STATE_READY));
                 startActivity(intent);
+                // Auto disconnect after specified seconds
+                try {
+                    int disconnectSec = 0;
+                    if (disconnectSecEditText != null && disconnectSecEditText.getText() != null) {
+                        String ds = disconnectSecEditText.getText().toString().trim();
+                        if (!ds.isEmpty()) {
+                            disconnectSec = Integer.parseInt(ds);
+                        }
+                    }
+                    if (disconnectSec > 0) {
+                        new Timer().schedule(new TimerTask() {
+                            @Override
+                            public void run() {
+                                try {
+                                    TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+                                    Class<?> c = Class.forName(tm.getClass().getName());
+                                    Method m = c.getDeclaredMethod("getITelephony");
+                                    m.setAccessible(true);
+                                    Object telephonyService = m.invoke(tm);
+                                    Class<?> telephonyInterfaceClass = Class.forName(telephonyService.getClass().getName());
+                                    Method endCallMethod = telephonyInterfaceClass.getDeclaredMethod("endCall");
+                                    endCallMethod.invoke(telephonyService);
+                                } catch (Exception ex) {
+                                    ex.printStackTrace();
+                                }
+                            }
+                        }, disconnectSec * 1000L);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 currentReverseNoOfCall--;
             } else {
                 System.out.println("Time's up!");
@@ -238,7 +327,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 stopCallingButton.setBackgroundColor(MainActivity.COLOR30_LIGHT);
                 currentNoOfCalls.setVisibility(View.INVISIBLE);
                 Snackbar.make(findViewById(R.id.ar_stop_call), "Calling stopped to " + name, Snackbar.LENGTH_LONG).show();
-                timer.cancel();
+                if (timer != null) timer.cancel();
             }
         }
     }

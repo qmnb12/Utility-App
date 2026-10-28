@@ -46,8 +46,12 @@ public class FeatureHubActivity extends AppCompatActivity {
         findViewById(R.id.feature_multi_sms).setOnClickListener(v -> multiSmsDialog(false));
         findViewById(R.id.feature_schedule).setOnClickListener(v -> multiSmsDialog(true));
         findViewById(R.id.feature_history).setOnClickListener(v -> showHistory());
+        findViewById(R.id.feature_direct_dial).setOnClickListener(v -> directDialDialog());
+        findViewById(R.id.feature_clipboard_dial).setOnClickListener(v -> dialFromClipboard());
+        findViewById(R.id.feature_device_info).setOnClickListener(v -> deviceInfoDialog());
         findViewById(R.id.feature_backup).setOnClickListener(v -> backupDialog());
         findViewById(R.id.feature_theme).setOnClickListener(v -> themeDialog());
+        findViewById(R.id.feature_clear_data).setOnClickListener(v -> clearDataDialog());
         findViewById(R.id.feature_call_timer).setOnClickListener(v -> callTimerInfo());
         findViewById(R.id.feature_back).setOnClickListener(v -> finish());
     }
@@ -220,6 +224,96 @@ public class FeatureHubActivity extends AppCompatActivity {
                 getPrefs().edit().putInt("theme_mode", mode).apply();
                 toast("Theme preference updated");
             }).show();
+    }
+
+    private void directDialDialog() {
+        EditText input = new EditText(this);
+        input.setHint("Enter phone number");
+        input.setInputType(InputType.TYPE_CLASS_PHONE);
+        int pad = (int)(16 * getResources().getDisplayMetrics().density);
+        input.setPadding(pad, pad / 2, pad, pad / 2);
+        new AlertDialog.Builder(this).setTitle("Direct Dial")
+            .setMessage("Enter number to call directly")
+            .setView(input)
+            .setPositiveButton("Call", (d, w) -> {
+                String num = input.getText().toString().trim();
+                if (num.isEmpty()) { toast("Enter a number"); return; }
+                try {
+                    Intent intent = new Intent(Intent.ACTION_CALL);
+                    intent.setData(android.net.Uri.parse("tel:" + num.replace(" ", "").replace("-", "")));
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+                        toast("Grant CALL_PHONE permission in settings");
+                        return;
+                    }
+                    startActivity(intent);
+                    addHistory("Direct call to " + num);
+                } catch (Exception e) {
+                    toast("Could not start call: " + e.getMessage());
+                }
+            })
+            .setNegativeButton("Cancel", null).show();
+    }
+
+    private void dialFromClipboard() {
+        try {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (clipboard == null || !clipboard.hasPrimaryClip()) {
+                toast("Clipboard is empty");
+                return;
+            }
+            ClipData.Item item = clipboard.getPrimaryClip().getItemAt(0);
+            String text = item == null ? "" : item.getText().toString().trim();
+            if (text.isEmpty()) { toast("No text in clipboard"); return; }
+            String cleaned = text.replaceAll("[^+0-9]", "");
+            if (cleaned.isEmpty() || cleaned.length() < 7) { toast("No valid phone number found in clipboard"); return; }
+            new AlertDialog.Builder(this).setTitle("Dial from Clipboard")
+                .setMessage("Found: " + text + "\n\nCall this number?")
+                .setPositiveButton("Call", (d, w) -> {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_CALL);
+                        intent.setData(android.net.Uri.parse("tel:" + cleaned));
+                        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+                            toast("Grant CALL_PHONE permission in settings");
+                            return;
+                        }
+                        startActivity(intent);
+                        addHistory("Dialed from clipboard: " + cleaned);
+                    } catch (Exception e) { toast("Could not start call"); }
+                })
+                .setNegativeButton("Cancel", null).show();
+        } catch (Exception e) { toast("Could not read clipboard"); }
+    }
+
+    private void deviceInfoDialog() {
+        String info = "Brand: " + Build.BRAND + "\n" +
+                "Model: " + Build.MODEL + "\n" +
+                "Device: " + Build.DEVICE + "\n" +
+                "Android: " + Build.VERSION.RELEASE + " (SDK " + Build.VERSION.SDK_INT + ")\n" +
+                "Manufacturer: " + Build.MANUFACTURER + "\n" +
+                "Board: " + Build.BOARD + "\n" +
+                "Hardware: " + Build.HARDWARE;
+        new AlertDialog.Builder(this).setTitle("Device Info")
+            .setMessage(info)
+            .setPositiveButton("Copy", (d, w) -> {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard != null) {
+                    clipboard.setPrimaryClip(ClipData.newPlainText("device_info", info));
+                    toast("Copied to clipboard");
+                }
+            })
+            .setNegativeButton("Close", null).show();
+    }
+
+    private void clearDataDialog() {
+        new AlertDialog.Builder(this).setTitle("Clear All Data")
+            .setMessage("This will clear Templates, Activity History and Theme preference. This action cannot be undone.")
+            .setPositiveButton("Clear", (d, w) -> {
+                getPrefs().edit().clear().apply();
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+                addHistory("Cleared all app data");
+                toast("All data cleared");
+            })
+            .setNegativeButton("Cancel", null).show();
     }
 
     private void callTimerInfo() {
