@@ -63,6 +63,8 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private boolean autoFilledFromClipboard = false;
     /** total number of calls requested for the running loop */
     private int totalCalls = 0;
+    /** remaining calls in current loop */
+    private int remaining = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
