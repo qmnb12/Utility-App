@@ -12,10 +12,18 @@
         app:layout_anchor="@+id/constraintLayout"
         app:layout_anchorGravity="center" />
 
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:layout_marginTop="?attr/actionBarSize"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constraintLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="16dp"
         tools:context="com.util.automaticredialer.AutomaticRedialerActivity">
 
         <Button
@@ -289,4 +297,5 @@
 
         <include layout="@layout/main_menu_button" />
     </androidx.constraintlayout.widget.ConstraintLayout>
+    </ScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
