@@ -39,6 +39,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private Button stopCallingButton = null;
     private TextView currentNoOfCalls = null;
     private TextView callGapTextView = null;
+    private android.widget.EditText manualNumberEditText = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -154,6 +155,14 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
 
             @Override
             public void onClick(View v) {
+                if (manualNumberEditText != null && manualNumberEditText.getText() != null) {
+                    String manualNum = manualNumberEditText.getText().toString().trim();
+                    if (!manualNum.isEmpty()) {
+                        number = manualNum;
+                        name = manualNum;
+                        callButton.setText(getString(R.string.ar_default_call_text, name));
+                    }
+                }
                 if (ContextCompat.checkSelfPermission(baseContext, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
                     System.out.println("Already have the permission " + Manifest.permission.CALL_PHONE);
                     performRepeatedCalls();
@@ -193,6 +202,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         noOfCallsTextView = findViewById(R.id.ar_no_of_calls);
         callGapTextView = findViewById(R.id.ar_call_gap);
         currentNoOfCalls = findViewById(R.id.ar_current_call_number);
+        manualNumberEditText = findViewById(R.id.ar_manual_number);
     }
 
     private void performRepeatedCalls() {

@@ -33,6 +33,20 @@
             app:layout_constraintVertical_bias="0.138" />
 
         <EditText
+            android:id="@+id/ar_manual_number"
+            android:layout_width="343dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="8dp"
+            android:hint="या मैन्युअली नंबर डालें"
+            android:inputType="phone"
+            android:maxLength="15"
+            android:padding="10dp"
+            android:textSize="@dimen/text_size_2"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/ar_select_contact" />
+
+        <EditText
             android:id="@+id/ar_no_of_calls"
             android:layout_width="65dp"
             android:layout_height="41dp"
@@ -61,8 +75,8 @@
             app:layout_constraintEnd_toStartOf="@+id/ar_no_of_calls"
             app:layout_constraintHorizontal_bias="0.211"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ar_select_contact"
-            app:layout_constraintVertical_bias="0.078" />
+            app:layout_constraintTop_toBottomOf="@+id/ar_manual_number"
+            app:layout_constraintVertical_bias="0.05" />
 
         <EditText
             android:id="@+id/ar_call_gap"

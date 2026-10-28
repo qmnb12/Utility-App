@@ -36,6 +36,20 @@
             app:layout_constraintVertical_bias="0.148" />
 
         <EditText
+            android:id="@+id/ms_manual_number"
+            android:layout_width="343dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="8dp"
+            android:hint="या मैन्युअली नंबर डालें"
+            android:inputType="phone"
+            android:maxLength="15"
+            android:padding="10dp"
+            android:textSize="@dimen/text_size_2"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/ms_select_contact" />
+
+        <EditText
             android:id="@+id/ms_no_of_message"
             android:layout_width="65dp"
             android:layout_height="41dp"
@@ -64,8 +78,8 @@
             android:textSize="@dimen/text_size_2"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ms_select_contact"
-            app:layout_constraintVertical_bias="0.069" />
+            app:layout_constraintTop_toBottomOf="@+id/ms_manual_number"
+            app:layout_constraintVertical_bias="0.05" />
 
         <!--        <LinearLayout-->
 <!--            android:layout_width="400dp"-->

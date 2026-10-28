@@ -47,6 +47,7 @@ public class MessageSenderActivity extends AppCompatActivity {
     private SmsManager smsManager;
     private String templateMessage;
     private TextView enterMessageTextView;
+    private android.widget.EditText manualNumberEditText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -153,6 +154,16 @@ public class MessageSenderActivity extends AppCompatActivity {
                     });
             @Override
             public void onClick(View v) {
+                if (manualNumberEditText != null && manualNumberEditText.getText() != null) {
+                    String manualNum = manualNumberEditText.getText().toString().trim();
+                    if (!manualNum.isEmpty()) {
+                        number = manualNum;
+                        if (name == null || name.isEmpty()) {
+                            name = manualNum;
+                        }
+                        sendMessageButton.setText(getString(R.string.ms_send_message_text, name));
+                    }
+                }
                 templateMessage = enterMessageTextView.getText().toString().trim();
                 if (ContextCompat.checkSelfPermission(baseContext, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
                     System.out.println("Already have the permission " + Manifest.permission.SEND_SMS);
@@ -248,6 +259,7 @@ public class MessageSenderActivity extends AppCompatActivity {
         messageGapTextView = findViewById(R.id.ms_message_gap);
         stopMessagingButton = findViewById(R.id.ms_stop_message);
         enterMessageTextView = findViewById(R.id.ms_enter_message);
+        manualNumberEditText = findViewById(R.id.ms_manual_number);
     }
 
     class MessageTask extends TimerTask {
