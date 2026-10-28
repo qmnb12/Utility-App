@@ -265,6 +265,12 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         disconnectSecEditText = findViewById(R.id.ar_disconnect_sec);
         countryCodeSpinner = findViewById(R.id.ar_country_code_spinner);
         disconnectModeGroup = findViewById(R.id.ar_disconnect_mode_group);
+        android.widget.CheckBox runInBg = findViewById(R.id.ar_run_in_background);
+        if (runInBg != null) {
+            runInBg.setChecked(prefs.getBoolean("run_in_background", false));
+            runInBg.setOnCheckedChangeListener((btn, checked) ->
+                    prefs.edit().putBoolean("run_in_background", checked).apply());
+        }
 
         // Manual number typed -> enable the call button right away
         if (manualNumberEditText != null) {
@@ -497,13 +503,39 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStop() {
+        super.onStop();
+        // App went to background (user pressed Back/Home, or the dialer covered us).
+        // Default: stop the whole redial loop so calls do NOT keep firing in the background.
+        boolean runInBackground = prefs != null && prefs.getBoolean("run_in_background", false);
+        if (!runInBackground && !isChangingConfigurations()) {
+            stopCallingLoop();
+        }
+    }
+
+    @Override
     protected void onDestroy() {
+        stopCallingLoop();
+        super.onDestroy();
+    }
+
+    /** Cancels the redial timer, pending disconnects and the call-state receiver. */
+    private void stopCallingLoop() {
         stopAllDisconnectionInternal();
         if (timer != null) {
             timer.cancel();
             timer = null;
         }
-        super.onDestroy();
+        try {
+            if (stopCallingButton != null) {
+                stopCallingButton.setClickable(false);
+                stopCallingButton.setBackgroundColor(MainActivity.COLOR30_LIGHT);
+            }
+            if (currentNoOfCalls != null) {
+                currentNoOfCalls.setVisibility(View.INVISIBLE);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     private void endCallNow() {

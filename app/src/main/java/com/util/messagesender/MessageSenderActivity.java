@@ -411,11 +411,37 @@ public class MessageSenderActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStop() {
+        super.onStop();
+        // Leaving the screen stops the messaging loop, so SMS is not sent in the background
+        // unless the user explicitly enabled it.
+        boolean runInBackground = prefs != null && prefs.getBoolean("ms_run_in_background", false);
+        if (!runInBackground && !isChangingConfigurations()) {
+            stopMessagingLoop();
+        }
+    }
+
+    @Override
     protected void onDestroy() {
+        stopMessagingLoop();
+        super.onDestroy();
+    }
+
+    /** Cancels the messaging timer and resets the running-state UI. */
+    private void stopMessagingLoop() {
         if (timer != null) {
             timer.cancel();
             timer = null;
         }
-        super.onDestroy();
+        try {
+            if (stopMessagingButton != null) {
+                stopMessagingButton.setClickable(false);
+                stopMessagingButton.setBackgroundColor(MainActivity.COLOR30_LIGHT);
+            }
+            if (currentNumberOfMessage != null) {
+                currentNumberOfMessage.setVisibility(View.INVISIBLE);
+            }
+        } catch (Exception ignored) {
+        }
     }
 }
