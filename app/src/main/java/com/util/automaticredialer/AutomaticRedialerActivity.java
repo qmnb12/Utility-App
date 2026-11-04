@@ -643,6 +643,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         sawCallState = false;
         clearDisconnectScheduling();
         if (!redialSessionRunning || !hadActiveAttempt) return;
+        if (remaining <= 0) {
+            finishCalling();
+            return;
+        }
         scheduleNextCall(callGapMillis);
     }
 
@@ -758,6 +762,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
 
     private void updateDisconnectModeInfo(int mode) {
         if (disconnectTimeLayout == null || disconnectModeInfo == null) return;
+        if (mode == -1) mode = DISCONNECT_OFF;
         if (mode == DISCONNECT_OFF) {
             disconnectTimeLayout.setVisibility(View.GONE);
             disconnectModeInfo.setText(R.string.ar_disconnect_info_off);
