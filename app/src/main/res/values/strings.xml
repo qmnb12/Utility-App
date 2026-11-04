@@ -69,6 +69,8 @@
     </string-array>
 
     <string name="message_sender">Message Sender</string>
+    <string name="ms_intro_title">Message Sender</string>
+    <string name="ms_intro_desc">Create a message and send it to your selected number at a controlled interval. Keep this screen open while the sending session runs; templates and multi-recipient tools are available in More Tools.</string>
     <string name="ms_select_contact">Select Contact</string>
     <string name="ms_send_message_text">Send to %1s</string>
     <string name="ms_default_no_of_message">20</string>
