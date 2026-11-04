@@ -46,6 +46,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private static final int DISCONNECT_DIRECT = R.id.ar_mode_direct;
     private static final int DISCONNECT_PICKUP = R.id.ar_mode_pickup;
 
+    private static boolean redialSessionInUse;
     private boolean redialSessionRunning;
     private long callGapMillis = 5000L;
     private boolean disconnectCountdownStarted;
@@ -379,8 +380,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 && manualNumberEditText.getText().toString().trim().length() >= 4;
         boolean batch = batchNumbersEditText != null
                 && batchNumbersEditText.getText().toString().trim().length() >= 4;
-        boolean enabled = manual || batch || number != null;
+        boolean enabled = (manual || batch || number != null)
+                && !redialSessionRunning && !redialSessionInUse;
         callButton.setClickable(enabled);
+        callButton.setAlpha(enabled ? 1f : 0.65f);
         callButton.setBackgroundColor(enabled
                 ? MainActivity.COLOR10_DARK : MainActivity.COLOR10_LIGHT);
     }
@@ -423,6 +426,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     }
 
     private void performRepeatedCalls() {
+        if (redialSessionInUse) {
+            showError("A redial session is already running. Stop it before starting another.");
+            return;
+        }
         boolean ussdMode = ussdModeCheckBox.isChecked();
         batchNumbers = null;
         batchIndex = 0;
@@ -507,7 +514,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         currentNoOfCalls.setText(getString(R.string.ar_current_no_of_call, 0));
         callGapMillis = gapSeconds * 1000L;
         try {
+            redialSessionInUse = true;
             redialSessionRunning = true;
+            callButton.setClickable(false);
+            callButton.setAlpha(0.65f);
             registerCallStateListener();
             scheduleNextCall(Constants.AUTOMATIC_REDIALER_INITIAL_DELAY);
         } catch (Exception e) {
@@ -734,10 +744,6 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private void finishCalling() {
         stopCallingLoop();
         currentNoOfCalls.setVisibility(View.INVISIBLE);
-        callButton.setClickable(false);
-        callButton.setBackgroundColor(MainActivity.COLOR10_LIGHT);
-        stopCallingButton.setClickable(false);
-        stopCallingButton.setBackgroundColor(MainActivity.COLOR30_LIGHT);
         Snackbar.make(callButton, "Redial session completed.", Snackbar.LENGTH_LONG).show();
     }
 
@@ -745,7 +751,16 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         handler.removeCallbacks(backgroundStopRunnable);
         handler.removeCallbacks(callStepRunnable);
         clearDisconnectScheduling();
+        if (redialSessionRunning) redialSessionInUse = false;
         redialSessionRunning = false;
+        if (callButton != null) {
+            callButton.setAlpha(1f);
+            refreshCallButtonEnabled();
+        }
+        if (stopCallingButton != null) {
+            stopCallingButton.setClickable(false);
+            stopCallingButton.setBackgroundColor(MainActivity.COLOR30_LIGHT);
+        }
         if (callStateReceiver != null) {
             try {
                 unregisterReceiver(callStateReceiver);
@@ -800,6 +815,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             } catch (SecurityException ignored) { }
         }
         handler.removeCallbacks(backgroundStopRunnable);
+        refreshCallButtonEnabled();
     }
 
     @Override
