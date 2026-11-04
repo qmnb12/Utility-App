@@ -22,7 +22,7 @@
     <string name="ar_call_gap">Call Gap After Disconnect (seconds)</string>
     <string name="ar_call_gap_info">Next call ka gap previous call ke fully disconnect hone ke baad start hoga.</string>
     <string name="ar_disconnect_info_off">Auto disconnect off hai. Call ko manually end karein.</string>
-    <string name="ar_disconnect_info_direct">Timer outgoing call start hote hi chalega. Set time ke baad app unanswered / ringing call ko bhi end karne ki request karega. Android ya phone app hang-up block kar sakta hai.</string>
+    <string name="ar_disconnect_info_direct">Timer outgoing call start hote hi chalega. Set time ke baad app unanswered / ringing call ko bhi end karne ki request karega. Hang-up Android ke TelecomManager API par depend karta hai; Android 10+ mein yeh API deprecated hai aur phone manufacturer ise block kar sakta hai.</string>
     <string name="ar_disconnect_info_pickup">Timer Android ke OFFHOOK / active signal par start hota hai. Android dialing ko bhi OFFHOOK report kar sakta hai, isliye timer doosre person ke answer karne se pehle bhi start ho sakta hai. Exact answer detection ke liye full default-dialer integration chahiye.</string>
     <string name="ar_intro_title">Automatic Redialer</string>
     <string name="ar_intro_desc">Ek number ya batch list par calls ko sequence mein start karein. Har call ke end hone ke baad configured Call Gap wait hoga; auto-disconnect aur audio route alag settings hain.</string>
