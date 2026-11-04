@@ -3,45 +3,52 @@ package com.util.features;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.telephony.SmsManager;
 import android.widget.Toast;
 
+import com.util.util.PhoneNumberHelper;
+import com.util.util.SmsDispatch;
+
+import org.json.JSONObject;
+
+import java.util.List;
+
 public class ScheduledSmsReceiver extends BroadcastReceiver {
-    @Override public void onReceive(Context context, Intent intent) {
-        String rawNumbers = intent.getStringExtra("numbers");
-        String message = intent.getStringExtra("message");
-        if (rawNumbers == null || message == null || message.trim().isEmpty()) return;
-        if (context.checkSelfPermission(android.Manifest.permission.SEND_SMS)
-                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(context, "SMS permission not granted", Toast.LENGTH_LONG).show();
-            return;
-        }
+    public static final String ACTION_DELIVER_SCHEDULED_SMS = "com.util.action.DELIVER_SCHEDULED_SMS";
+    public static final String EXTRA_SCHEDULE_ID = "schedule_id";
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        if (intent == null || !ACTION_DELIVER_SCHEDULED_SMS.equals(intent.getAction())) return;
+        int id = intent.getIntExtra(EXTRA_SCHEDULE_ID, -1);
+        if (id < 0) return;
+
+        JSONObject job = ScheduledSmsStore.claim(context, id);
+        if (job == null) return;
         try {
-            SmsManager manager = SmsManager.getDefault();
-            java.util.ArrayList<String> parts = message.length() > 160
-                    ? manager.divideMessage(message)
-                    : null;
-            int sent = 0;
-            for (String raw : rawNumbers.split("[,;\\n]+")) {
-                String number = raw.trim();
-                if (!number.isEmpty()) {
-                    if (parts != null) {
-                        manager.sendMultipartTextMessage(number, null, parts, null, null);
-                    } else {
-                        manager.sendTextMessage(number, null, message, null, null);
-                    }
-                    sent++;
-                }
+            if (context.checkSelfPermission(android.Manifest.permission.SEND_SMS)
+                    != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                SmsStatusReceiver.appendHistory(context, "Scheduled SMS cancelled: SMS permission is not granted.");
+                return;
             }
-            SharedPreferences prefs = context.getSharedPreferences("utility_feature_data", Context.MODE_PRIVATE);
-            String previous = prefs.getString("history", "");
-            String entry = java.text.DateFormat.getDateTimeInstance().format(new java.util.Date())
-                + " — Scheduled SMS request sent to " + sent + " recipient(s)";
-            prefs.edit().putString("history", entry + (previous.isEmpty() ? "" : "\n" + previous)).apply();
-            Toast.makeText(context, "Scheduled SMS request submitted", Toast.LENGTH_LONG).show();
+            String rawNumbers = job.optString("numbers", "");
+            String message = job.optString("message", "");
+            List<String> recipients = PhoneNumberHelper.parseRecipients(rawNumbers, "+91");
+            SmsManager manager = SmsManager.getDefault();
+            int submitted = 0;
+            for (String number : recipients) {
+                SmsDispatch.send(context, manager, number, message);
+                submitted++;
+            }
+            SmsStatusReceiver.appendHistory(context,
+                    "Scheduled SMS submitted to " + submitted + " recipient(s); carrier results will follow.");
+            Toast.makeText(context, "Scheduled SMS submitted", Toast.LENGTH_LONG).show();
         } catch (Exception e) {
+            SmsStatusReceiver.appendHistory(context,
+                    "Scheduled SMS failed: " + e.getClass().getSimpleName());
             Toast.makeText(context, "Scheduled SMS failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        } finally {
+            ScheduledSmsStore.remove(context, id);
         }
     }
 }

@@ -1,69 +1,65 @@
 package com.util.util;
 
-import android.os.Build;
-
-import java.util.Random;
+import java.security.SecureRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Common {
-    private static Random random;
-    public static String getRandomDigits(int digits){
-        if(random == null)
-            random = new Random();
-        StringBuilder result = new StringBuilder();
-        System.out.println("================ digits1: " + digits);
-        while(digits > 0) {
-            int currentDigit = digits;
-            // to handle integer range
-            if(digits > 9) {
-                currentDigit = 9;
-                digits -= currentDigit;
-            }
-            else
-                digits = 0;
-            int min = (int) Math.pow(10, currentDigit - 1);
-            int max = (int) Math.pow(10, currentDigit) - 1;
-            result.append(String.valueOf(min + random.nextInt(max - min + 1)));
+/** Random placeholder helpers that work on every supported Android API level. */
+public final class Common {
+    private static final String ALLOWED_CHARS =
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final int MAX_PLACEHOLDER_LENGTH = 50;
+
+    private Common() { }
+
+    public static String getRandomDigits(int digits) {
+        validateLength(digits);
+        StringBuilder result = new StringBuilder(digits);
+        if (digits == 0) return "";
+        result.append((char) ('1' + RANDOM.nextInt(9)));
+        for (int i = 1; i < digits; i++) {
+            result.append((char) ('0' + RANDOM.nextInt(10)));
         }
         return result.toString();
     }
 
-    public static String getRandomString(int digits) {
-        String allowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-        // Use StringBuilder to efficiently build the string
-        StringBuilder randomStringBuilder = new StringBuilder(digits);
-
-        if(random == null)
-            random = new Random();
-        // Generate the random string
-        for (int i = 0; i < digits; i++) {
-            int randomIndex = random.nextInt(allowedChars.length());
-            char randomChar = allowedChars.charAt(randomIndex);
-            randomStringBuilder.append(randomChar);
+    public static String getRandomString(int length) {
+        validateLength(length);
+        StringBuilder result = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            result.append(ALLOWED_CHARS.charAt(RANDOM.nextInt(ALLOWED_CHARS.length())));
         }
-
-        return randomStringBuilder.toString();
+        return result.toString();
     }
 
-    public static String replacePlaceholderWithNumberStr(String original, String searchString, int digits) {
-        Pattern pattern = Pattern.compile(searchString);
-        Matcher matcher = pattern.matcher(original);
-        String result = null;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            result = matcher.replaceAll(m -> getRandomDigits(digits));
-        }
-        return result;
+    public static String replacePlaceholderWithNumberStr(
+            String original, String searchString, int digits) {
+        return replace(original, searchString, digits, true);
     }
 
-    public static String replacePlaceholderWithCharStr(String original, String searchString, int digits) {
-        Pattern pattern = Pattern.compile(searchString);
-        Matcher matcher = pattern.matcher(original);
-        String result = null;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            result = matcher.replaceAll(m -> getRandomString(digits));
+    public static String replacePlaceholderWithCharStr(
+            String original, String searchString, int length) {
+        return replace(original, searchString, length, false);
+    }
+
+    private static String replace(String original, String token, int length, boolean numeric) {
+        if (original == null || token == null || token.isEmpty()) return original;
+        validateLength(length);
+        Matcher matcher = Pattern.compile(Pattern.quote(token)).matcher(original);
+        StringBuffer result = new StringBuffer();
+        while (matcher.find()) {
+            String replacement = numeric ? getRandomDigits(length) : getRandomString(length);
+            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
         }
-        return result;
+        matcher.appendTail(result);
+        return result.toString();
+    }
+
+    private static void validateLength(int length) {
+        if (length < 1 || length > MAX_PLACEHOLDER_LENGTH) {
+            throw new IllegalArgumentException(
+                    "Placeholder length must be between 1 and " + MAX_PLACEHOLDER_LENGTH + ".");
+        }
     }
 }

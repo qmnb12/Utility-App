@@ -53,7 +53,6 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:entryValues="@array/country_codes"
                     android:backgroundTint="@color/color10_light" />
 
                 <EditText
