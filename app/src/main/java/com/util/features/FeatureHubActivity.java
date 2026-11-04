@@ -481,7 +481,7 @@ public class FeatureHubActivity extends AppCompatActivity {
 
     private void callTimerInfo() {
         new AlertDialog.Builder(this).setTitle("Call duration control")
-                .setMessage("Auto hang-up uses Android's public TelecomManager API and ANSWER_PHONE_CALLS permission where supported. Android versions, carrier apps and device manufacturers may still block it. On Android 8 and below, this app cannot provide supported automatic hang-up; use the in-call screen.")
+                .setMessage("Call Start mode starts its timer as soon as the outgoing call is launched, so it can request hang-up even when the other person does not answer. After Active Signal mode starts from Android's OFFHOOK state; Android can report OFFHOOK while a call is still dialing, so this is not guaranteed to mean the other person answered. Exact answer detection requires this app to become the default Phone app and implement a complete InCallService interface. Auto hang-up uses TelecomManager and ANSWER_PHONE_CALLS where supported; Android or the phone manufacturer may still block it. Android 8 and below do not support this app's automatic hang-up mode.")
                 .setPositiveButton("OK", null).show();
     }
 
