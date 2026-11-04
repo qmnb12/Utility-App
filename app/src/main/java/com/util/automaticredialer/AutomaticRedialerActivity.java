@@ -1183,6 +1183,20 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             return;
         }
         updatePipAutoEnter(true);
+        // Enter PiP before Telecom brings the system Phone UI to the foreground.
+        // This makes the compact Live Log visible above the call screen without
+        // requesting SYSTEM_ALERT_WINDOW / Display over other apps permission.
+        if (!isInPictureInPictureMode()) {
+            try {
+                enterPictureInPictureMode(new PictureInPictureParams.Builder()
+                        .setAspectRatio(new Rational(16, 9))
+                        .setActions(buildPipActions())
+                        .build());
+                appendLog("Opening compact Live Log before the Phone call screen.");
+            } catch (RuntimeException e) {
+                appendLog("PiP could not be opened; the Phone app will open normally. " + e.getMessage());
+            }
+        }
     }
 
     private void updatePipAutoEnter(boolean enabled) {
