@@ -49,17 +49,81 @@
                 android:textColor="?android:attr/textColorSecondary"
                 android:textSize="13sp" />
 
-            <Button
-                android:id="@+id/ar_select_contact"
+            <LinearLayout
+                android:id="@+id/ar_quick_actions"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:backgroundTint="@color/color30_dark"
-                android:clickable="true"
-                android:padding="12dp"
-                android:text="@string/ar_select_contact"
-                android:textAllCaps="false"
-                android:textSize="16sp" />
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/ar_select_contact"
+                    android:layout_width="0dp"
+                    android:layout_height="76dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="@color/color30_dark"
+                    android:drawableTop="@drawable/ic_contact"
+                    android:drawablePadding="2dp"
+                    android:gravity="center"
+                    android:minWidth="0dp"
+                    android:padding="3dp"
+                    android:text="@string/ar_select_contact_short"
+                    android:textAllCaps="false"
+                    android:textColor="@android:color/white"
+                    android:textSize="10sp" />
+
+                <Button
+                    android:id="@+id/ar_last_call"
+                    android:layout_width="0dp"
+                    android:layout_height="76dp"
+                    android:layout_marginStart="5dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="@color/color10_dark"
+                    android:drawableTop="@drawable/ic_last_call"
+                    android:drawablePadding="2dp"
+                    android:gravity="center"
+                    android:minWidth="0dp"
+                    android:padding="3dp"
+                    android:text="@string/ar_last_call"
+                    android:textAllCaps="false"
+                    android:textColor="@android:color/white"
+                    android:textSize="10sp" />
+
+                <Button
+                    android:id="@+id/ar_open_history"
+                    android:layout_width="0dp"
+                    android:layout_height="76dp"
+                    android:layout_marginStart="5dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="@color/color10_dark"
+                    android:drawableTop="@drawable/ic_call_history"
+                    android:drawablePadding="2dp"
+                    android:gravity="center"
+                    android:minWidth="0dp"
+                    android:padding="3dp"
+                    android:text="@string/ar_history_short"
+                    android:textAllCaps="false"
+                    android:textColor="@android:color/white"
+                    android:textSize="10sp" />
+
+                <Button
+                    android:id="@+id/ar_open_log"
+                    android:layout_width="0dp"
+                    android:layout_height="76dp"
+                    android:layout_marginStart="5dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="@color/color10_dark"
+                    android:drawableTop="@drawable/ic_live_log"
+                    android:drawablePadding="2dp"
+                    android:gravity="center"
+                    android:minWidth="0dp"
+                    android:padding="3dp"
+                    android:text="@string/ar_live_log_short"
+                    android:textAllCaps="false"
+                    android:textColor="@android:color/white"
+                    android:textSize="10sp" />
+            </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/ar_manual_layout"
@@ -326,136 +390,6 @@
                 android:textColor="@android:color/black"
                 android:textSize="16sp"
                 android:textAllCaps="false" />
-
-            <LinearLayout
-                android:id="@+id/ar_live_log_panel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="#101820"
-                android:orientation="vertical"
-                android:padding="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/ar_live_log_title"
-                        android:textColor="#FFFFFF"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                    <Button
-                        android:id="@+id/ar_clear_log"
-                        android:layout_width="wrap_content"
-                        android:layout_height="38dp"
-                        android:backgroundTint="@color/color30_light"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="14dp"
-                        android:text="@string/ar_clear_log"
-                        android:textAllCaps="false"
-                        android:textColor="@android:color/black"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="8dp"
-                    android:text="@string/ar_live_log_desc"
-                    android:textColor="#AAB8C7"
-                    android:textSize="12sp" />
-
-                <ScrollView
-                    android:id="@+id/ar_live_log_scroll"
-                    android:layout_width="match_parent"
-                    android:layout_height="190dp"
-                    android:background="#0B1220"
-                    android:fillViewport="true"
-                    android:nestedScrollingEnabled="true"
-                    android:padding="10dp">
-
-                    <TextView
-                        android:id="@+id/ar_live_log_text"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="monospace"
-                        android:text="@string/ar_live_log_empty"
-                        android:textColor="#D7E2F0"
-                        android:textSize="11sp"
-                        android:lineSpacingExtra="2dp" />
-                </ScrollView>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/ar_call_history_panel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="#101820"
-                android:orientation="vertical"
-                android:padding="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/ar_history_title"
-                        android:textColor="#FFFFFF"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                    <Button
-                        android:id="@+id/ar_clear_history"
-                        android:layout_width="wrap_content"
-                        android:layout_height="38dp"
-                        android:backgroundTint="@color/color30_light"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="14dp"
-                        android:text="@string/ar_clear_history"
-                        android:textAllCaps="false"
-                        android:textColor="@android:color/black"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <ScrollView
-                    android:id="@+id/ar_call_history_scroll"
-                    android:layout_width="match_parent"
-                    android:layout_height="150dp"
-                    android:layout_marginTop="8dp"
-                    android:background="#0B1220"
-                    android:fillViewport="true"
-                    android:nestedScrollingEnabled="true"
-                    android:padding="10dp">
-
-                    <TextView
-                        android:id="@+id/ar_call_history_text"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans"
-                        android:text="@string/ar_history_empty"
-                        android:textColor="#D7E2F0"
-                        android:textSize="12sp"
-                        android:lineSpacingExtra="3dp" />
-                </ScrollView>
-            </LinearLayout>
 
             <include
                 layout="@layout/main_menu_button"
