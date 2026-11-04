@@ -565,7 +565,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             stopCallingButton.setBackgroundTintList(ColorStateList.valueOf(
                     stopButtonWasPressed ? ACTION_RED : ACTION_BLUE));
             stopCallingButton.setTextColor(Color.WHITE);
-            stopCallingButton.setText(stopButtonWasPressed ? "Stopped" : "Stop");
+            stopCallingButton.setText(stopButtonWasPressed ? "Stopped" : "Stop Redial");
         }
     }
 
