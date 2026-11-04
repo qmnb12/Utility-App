@@ -120,6 +120,37 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         @Override public void run() { doCallStep(); }
     };
 
+    private final Runnable callStatePollRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!redialSessionRunning || !currentCallLaunched) return;
+            try {
+                TelephonyManager phone =
+                        (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+                if (phone != null) {
+                    int state = phone.getCallState();
+                    if (state == TelephonyManager.CALL_STATE_OFFHOOK && !sawCallState) {
+                        sawCallState = true;
+                        isCallActive = true;
+                        waitingForPickup = false;
+                        appendLog("Phone-state polling fallback: OFFHOOK detected.");
+                        if (disconnectMode == DISCONNECT_PICKUP) {
+                            appendLog("Starting after-active-signal timer from the polled OFFHOOK state.");
+                            scheduleEndCall(pickupDisconnectSec);
+                        }
+                    } else if (state == TelephonyManager.CALL_STATE_IDLE && sawCallState) {
+                        appendLog("Phone-state polling fallback: IDLE detected. The call ended; starting Call Gap.");
+                        finishCurrentCall();
+                        return;
+                    }
+                }
+            } catch (SecurityException e) {
+                appendLog("Phone-state polling unavailable: READ_PHONE_STATE permission was lost.");
+            }
+            if (currentCallLaunched) handler.postDelayed(this, 1000L);
+        }
+    };
+
     private final Runnable backgroundStopRunnable = new Runnable() {
         @Override
         public void run() {
@@ -562,7 +593,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             return;
         }
 
+        ArrayList<String> requestedBatchNumbers = batchNumbers;
         stopCallingLoop();
+        batchNumbers = requestedBatchNumbers;
+        batchIndex = 0;
         totalCalls = calls;
         remaining = calls;
         disconnectMode = disconnectModeGroup.getCheckedRadioButtonId();
@@ -667,6 +701,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     }
 
     private void clearDisconnectScheduling() {
+        handler.removeCallbacks(callStatePollRunnable);
         for (Runnable runnable : disconnectRunnables) {
             handler.removeCallbacks(runnable);
         }
@@ -853,6 +888,11 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 }
                 appendLog("Call request sent to Android.");
                 scheduleDisconnectAfterCallStarts();
+                if (!ussdMode) {
+                    handler.removeCallbacks(callStatePollRunnable);
+                    handler.postDelayed(callStatePollRunnable, 1000L);
+                    appendLog("Phone-state polling fallback started (checks once per second).");
+                }
 
                 if (batchNumbers != null && !batchNumbers.isEmpty()) batchIndex++;
             } catch (SecurityException e) {
