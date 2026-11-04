@@ -129,6 +129,16 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private boolean pipFeatureAvailable;
     private boolean pipAutoEnterAllowed;
     private boolean pipUnavailableLogged;
+    private LinearLayout sessionFeedPanel;
+    private TextView sessionFeedStatusText;
+    private TextView sessionFeedNumberText;
+    private TextView sessionFeedCountText;
+    private TextView sessionFeedLogText;
+    private ScrollView sessionFeedScroll;
+    private Button sessionFeedStopButton;
+    private Button sessionFeedDialerButton;
+    private boolean showingSessionFeed;
+    private boolean sessionCompleted;
 
     private final String[] countryCodes = {
             "+91", "+1", "+44", "+971", "+61", "+65", "+81", "+49", "+33",
@@ -219,6 +229,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         standardHeaderView = activityRoot.getChildAt(0);
         standardContentView = activityRoot.getChildAt(1);
         setupPipPanel(activityRoot);
+        setupSessionFeedPanel(activityRoot);
         pipFeatureAvailable = getPackageManager().hasSystemFeature(
                 PackageManager.FEATURE_PICTURE_IN_PICTURE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -703,6 +714,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         }
 
         stopButtonWasPressed = false;
+        sessionCompleted = false;
         stopCallingButton.setClickable(true);
         stopCallingButton.setEnabled(true);
         currentNoOfCalls.setVisibility(View.VISIBLE);
@@ -883,8 +895,13 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         sawCallState = false;
         clearDisconnectScheduling();
         updatePipAutoEnter(false);
-        restoreAutomaticRedialerFromPip();
-        if (!redialSessionRunning || !hadActiveAttempt) return;
+        if (redialSessionRunning && hadActiveAttempt) {
+            restoreAutomaticRedialerFromPip();
+        }
+        if (!redialSessionRunning || !hadActiveAttempt) {
+            refreshSessionFeed();
+            return;
+        }
         appendLog("Call attempt finished. Remaining attempts: " + remaining + ".");
         if (remaining <= 0) {
             appendLog("No attempts remaining. Finishing the redial session.");
@@ -1000,6 +1017,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     }
 
     private void finishCalling() {
+        sessionCompleted = true;
         appendLog("Redial session completed successfully: all configured attempts processed.");
         stopCallingLoop();
         currentNoOfCalls.setVisibility(View.INVISIBLE);
@@ -1041,6 +1059,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         batchNumbers = null;
         refreshCallButtonEnabled();
         refreshPipPanel();
+        refreshSessionFeed();
     }
 
     private void updateDisconnectModeInfo(int mode) {
@@ -1128,7 +1147,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         pipPanel = new LinearLayout(this);
         pipPanel.setOrientation(LinearLayout.VERTICAL);
         pipPanel.setGravity(Gravity.CENTER_VERTICAL);
-        int padding = dp(12);
+        int padding = dp(8);
         pipPanel.setPadding(padding, padding, padding, padding);
         GradientDrawable background = new GradientDrawable();
         background.setColor(Color.rgb(13, 21, 37));
@@ -1140,14 +1159,14 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         TextView title = new TextView(this);
         title.setText("AUTOMATIC REDIALER");
         title.setTextColor(Color.rgb(125, 181, 255));
-        title.setTextSize(12);
+        title.setTextSize(11);
         title.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
         pipPanel.addView(title, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         pipStatusText = new TextView(this);
         pipStatusText.setTextColor(Color.WHITE);
-        pipStatusText.setTextSize(16);
+        pipStatusText.setTextSize(13);
         pipStatusText.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
         LinearLayout.LayoutParams statusParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1156,7 +1175,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
 
         pipNumberText = new TextView(this);
         pipNumberText.setTextColor(Color.rgb(205, 218, 236));
-        pipNumberText.setTextSize(14);
+        pipNumberText.setTextSize(12);
         pipNumberText.setMaxLines(2);
         pipNumberText.setEllipsize(android.text.TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams numberParams = new LinearLayout.LayoutParams(
@@ -1166,10 +1185,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
 
         pipLogText = new TextView(this);
         pipLogText.setTextColor(Color.rgb(170, 190, 215));
-        pipLogText.setTextSize(13);
+        pipLogText.setTextSize(11);
         pipLogText.setTypeface(android.graphics.Typeface.MONOSPACE);
         pipLogText.setLineSpacing(dp(2), 1.0f);
-        pipLogText.setMaxLines(8);
+        pipLogText.setMaxLines(7);
         pipLogText.setEllipsize(android.text.TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams logParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
@@ -1179,6 +1198,125 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         root.addView(pipPanel, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         refreshPipPanel();
+    }
+
+    private void setupSessionFeedPanel(LinearLayout root) {
+        sessionFeedPanel = new LinearLayout(this);
+        sessionFeedPanel.setOrientation(LinearLayout.VERTICAL);
+        sessionFeedPanel.setPadding(dp(16), dp(18), dp(16), dp(14));
+        sessionFeedPanel.setBackgroundColor(Color.rgb(10, 17, 31));
+        sessionFeedPanel.setVisibility(View.GONE);
+
+        TextView title = new TextView(this);
+        title.setText("LIVE SESSION FEED");
+        title.setTextColor(Color.rgb(125, 181, 255));
+        title.setTextSize(18);
+        title.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
+        sessionFeedPanel.addView(title, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        sessionFeedStatusText = new TextView(this);
+        sessionFeedStatusText.setTextColor(Color.WHITE);
+        sessionFeedStatusText.setTextSize(16);
+        sessionFeedStatusText.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
+        LinearLayout.LayoutParams statusParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        statusParams.topMargin = dp(12);
+        sessionFeedPanel.addView(sessionFeedStatusText, statusParams);
+
+        sessionFeedNumberText = new TextView(this);
+        sessionFeedNumberText.setTextColor(Color.rgb(205, 218, 236));
+        sessionFeedNumberText.setTextSize(15);
+        sessionFeedNumberText.setMaxLines(2);
+        sessionFeedNumberText.setPadding(0, dp(4), 0, dp(2));
+        sessionFeedPanel.addView(sessionFeedNumberText, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        sessionFeedCountText = new TextView(this);
+        sessionFeedCountText.setTextColor(Color.rgb(125, 181, 255));
+        sessionFeedCountText.setTextSize(13);
+        sessionFeedPanel.addView(sessionFeedCountText, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        sessionFeedScroll = new ScrollView(this);
+        sessionFeedScroll.setFillViewport(false);
+        sessionFeedScroll.setBackgroundColor(Color.rgb(15, 25, 43));
+        sessionFeedLogText = new TextView(this);
+        sessionFeedLogText.setTextColor(Color.rgb(220, 230, 243));
+        sessionFeedLogText.setTextSize(13);
+        sessionFeedLogText.setTypeface(android.graphics.Typeface.MONOSPACE);
+        sessionFeedLogText.setLineSpacing(dp(3), 1.0f);
+        sessionFeedLogText.setTextIsSelectable(true);
+        sessionFeedLogText.setPadding(dp(10), dp(10), dp(10), dp(10));
+        sessionFeedScroll.addView(sessionFeedLogText, new ScrollView.LayoutParams(
+                ScrollView.LayoutParams.MATCH_PARENT, ScrollView.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams logParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        logParams.topMargin = dp(10);
+        logParams.bottomMargin = dp(12);
+        sessionFeedPanel.addView(sessionFeedScroll, logParams);
+
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setGravity(Gravity.CENTER);
+        sessionFeedStopButton = new Button(this);
+        sessionFeedStopButton.setText("STOP REDIAL");
+        sessionFeedStopButton.setTextColor(Color.WHITE);
+        sessionFeedStopButton.setAllCaps(false);
+        sessionFeedStopButton.setBackgroundTintList(ColorStateList.valueOf(ACTION_RED));
+        LinearLayout.LayoutParams stopParams = new LinearLayout.LayoutParams(0, dp(52), 1f);
+        stopParams.rightMargin = dp(8);
+        actions.addView(sessionFeedStopButton, stopParams);
+
+        sessionFeedDialerButton = new Button(this);
+        sessionFeedDialerButton.setText("Back to Dialer");
+        sessionFeedDialerButton.setTextColor(Color.WHITE);
+        sessionFeedDialerButton.setAllCaps(false);
+        sessionFeedDialerButton.setBackgroundTintList(ColorStateList.valueOf(ACTION_BLUE));
+        actions.addView(sessionFeedDialerButton, new LinearLayout.LayoutParams(0, dp(52), 1f));
+        sessionFeedPanel.addView(actions, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        sessionFeedStopButton.setOnClickListener(v -> {
+            boolean wasRunning = redialSessionRunning;
+            stopButtonWasPressed = true;
+            if (wasRunning) {
+                appendLog("Stop pressed from the full-screen Live Session Feed. Future attempts are cancelled; any active call must be ended in the Phone app.");
+            } else {
+                appendLog("Stop pressed, but the redial session is not running.");
+            }
+            stopCallingLoop();
+            refreshCallButtonEnabled();
+            refreshSessionFeed();
+            if (wasRunning) {
+                Snackbar.make(sessionFeedPanel,
+                        "Redial stopped. End any connected call in the Phone app.",
+                        Snackbar.LENGTH_LONG).show();
+            }
+        });
+        sessionFeedDialerButton.setOnClickListener(v -> showDialerScreen());
+
+        root.addView(sessionFeedPanel, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        refreshSessionFeed();
+    }
+
+    private void showSessionFeed() {
+        showingSessionFeed = true;
+        if (standardHeaderView != null) standardHeaderView.setVisibility(View.GONE);
+        if (standardContentView != null) standardContentView.setVisibility(View.GONE);
+        if (pipPanel != null) pipPanel.setVisibility(View.GONE);
+        if (sessionFeedPanel != null) sessionFeedPanel.setVisibility(View.VISIBLE);
+        refreshSessionFeed();
+    }
+
+    private void showDialerScreen() {
+        showingSessionFeed = false;
+        if (standardHeaderView != null) standardHeaderView.setVisibility(View.VISIBLE);
+        if (standardContentView != null) standardContentView.setVisibility(View.VISIBLE);
+        if (pipPanel != null) pipPanel.setVisibility(View.GONE);
+        if (sessionFeedPanel != null) sessionFeedPanel.setVisibility(View.GONE);
+        refreshCallButtonEnabled();
     }
 
     private int dp(float value) {
@@ -1201,7 +1339,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         if (!isInPictureInPictureMode()) {
             try {
                 enterPictureInPictureMode(new PictureInPictureParams.Builder()
-                        .setAspectRatio(new Rational(9, 16))
+                        .setAspectRatio(new Rational(16, 9))
                         .setActions(buildPipActions())
                         .build());
                 appendLog("Opening compact Live Log before the Phone call screen.");
@@ -1217,7 +1355,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         try {
             PictureInPictureParams.Builder builder =
                     new PictureInPictureParams.Builder()
-                            .setAspectRatio(new Rational(9, 16))
+                            .setAspectRatio(new Rational(16, 9))
                             .setActions(buildPipActions());
             if (android.os.Build.VERSION.SDK_INT >= 31) {
                 builder.setAutoEnterEnabled(pipAutoEnterAllowed);
@@ -1240,10 +1378,25 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 Icon.createWithResource(this, android.R.drawable.ic_media_pause),
                 "Stop redial", "Stop the automatic redial session", stopPendingIntent);
         stopAction.setEnabled(redialSessionRunning);
+
+        Intent feedIntent = new Intent(this, AutomaticRedialerActivity.class);
+        feedIntent.setAction(ACTION_PIP_RESTORE_DIALER);
+        feedIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent feedPendingIntent = PendingIntent.getActivity(
+                this, 4104, feedIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        RemoteAction feedAction = new RemoteAction(
+                Icon.createWithResource(this, android.R.drawable.ic_menu_view),
+                "Open feed", "Open the full-screen Live Session Feed", feedPendingIntent);
         if (android.os.Build.VERSION.SDK_INT >= 28) {
             stopAction.setShouldShowIcon(true);
+            feedAction.setShouldShowIcon(true);
         }
-        return java.util.Collections.singletonList(stopAction);
+        ArrayList<RemoteAction> actions = new ArrayList<>();
+        actions.add(stopAction);
+        actions.add(feedAction);
+        return actions;
     }
 
     @Override
@@ -1258,7 +1411,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 && !isInPictureInPictureMode()) {
             try {
                 enterPictureInPictureMode(new PictureInPictureParams.Builder()
-                        .setAspectRatio(new Rational(9, 16))
+                        .setAspectRatio(new Rational(16, 9))
                         .setActions(buildPipActions())
                         .build());
             } catch (RuntimeException e) {
@@ -1271,14 +1424,19 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     public void onPictureInPictureModeChanged(
             boolean isInPictureInPictureMode, Configuration newConfig) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+        boolean showDialer = !isInPictureInPictureMode && !showingSessionFeed;
         if (standardHeaderView != null) {
-            standardHeaderView.setVisibility(isInPictureInPictureMode ? View.GONE : View.VISIBLE);
+            standardHeaderView.setVisibility(showDialer ? View.VISIBLE : View.GONE);
         }
         if (standardContentView != null) {
-            standardContentView.setVisibility(isInPictureInPictureMode ? View.GONE : View.VISIBLE);
+            standardContentView.setVisibility(showDialer ? View.VISIBLE : View.GONE);
         }
         if (pipPanel != null) {
             pipPanel.setVisibility(isInPictureInPictureMode ? View.VISIBLE : View.GONE);
+        }
+        if (sessionFeedPanel != null) {
+            sessionFeedPanel.setVisibility(
+                    !isInPictureInPictureMode && showingSessionFeed ? View.VISIBLE : View.GONE);
         }
         refreshPipPanel();
         appendLog(isInPictureInPictureMode
@@ -1294,6 +1452,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             status = "CALL IN PROGRESS  •  " + completed + "/" + totalCalls;
         } else if (redialSessionRunning) {
             status = "WAITING FOR NEXT CALL  •  " + remaining + " LEFT";
+        } else if (sessionCompleted) {
+            status = "SESSION COMPLETE";
+        } else if (stopButtonWasPressed) {
+            status = "REDIAL STOPPED";
         } else {
             status = "SESSION NOT RUNNING";
         }
@@ -1303,7 +1465,58 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         if (target == null || target.trim().isEmpty()) target = name;
         if (target == null || target.trim().isEmpty()) target = "No active number";
         if (pipNumberText != null) pipNumberText.setText(target);
-        if (pipLogText != null) pipLogText.setText(getLatestLogLines(6));
+        if (pipLogText != null) pipLogText.setText(getLatestLogLines(7));
+    }
+
+    private void refreshSessionFeed() {
+        if (sessionFeedPanel == null) return;
+
+        String status;
+        if (redialSessionRunning && currentCallLaunched) {
+            int completed = Math.max(0, totalCalls - remaining);
+            status = "CALL IN PROGRESS";
+            if (sessionFeedCountText != null) {
+                sessionFeedCountText.setText("Attempt " + completed + " of " + totalCalls);
+            }
+        } else if (redialSessionRunning) {
+            status = "WAITING FOR NEXT ATTEMPT";
+            if (sessionFeedCountText != null) {
+                sessionFeedCountText.setText("Next call will start after the configured Call Gap");
+            }
+        } else if (sessionCompleted) {
+            status = "SESSION COMPLETED";
+            if (sessionFeedCountText != null) {
+                sessionFeedCountText.setText("All configured attempts have been processed");
+            }
+        } else if (stopButtonWasPressed) {
+            status = "REDIAL STOPPED";
+            if (sessionFeedCountText != null) {
+                sessionFeedCountText.setText("No further attempts will be placed");
+            }
+        } else {
+            status = "SESSION MONITOR";
+            if (sessionFeedCountText != null) {
+                sessionFeedCountText.setText("Live activity and call events");
+            }
+        }
+
+        if (sessionFeedStatusText != null) sessionFeedStatusText.setText(status);
+        String target = currentAttemptLabel;
+        if (target == null || target.trim().isEmpty()) target = currentAttemptNumber;
+        if (target == null || target.trim().isEmpty()) target = name;
+        if (target == null || target.trim().isEmpty()) target = "No active number";
+        if (sessionFeedNumberText != null) sessionFeedNumberText.setText(target);
+        if (sessionFeedLogText != null) {
+            sessionFeedLogText.setText(liveLogBuffer.toString());
+            if (sessionFeedScroll != null) {
+                sessionFeedScroll.post(() -> sessionFeedScroll.fullScroll(View.FOCUS_DOWN));
+            }
+        }
+        if (sessionFeedStopButton != null) {
+            sessionFeedStopButton.setEnabled(redialSessionRunning);
+            sessionFeedStopButton.setAlpha(redialSessionRunning ? 1f : 0.65f);
+            sessionFeedStopButton.setText(redialSessionRunning ? "STOP REDIAL" : "STOPPED");
+        }
     }
 
     private String getLatestLogLines(int maxLines) {
@@ -1319,16 +1532,21 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     }
 
     private void restoreAutomaticRedialerFromPip() {
-        if (android.os.Build.VERSION.SDK_INT < 26 || !isInPictureInPictureMode()) return;
-        try {
-            Intent restoreIntent = new Intent(this, AutomaticRedialerActivity.class);
-            restoreIntent.setAction(ACTION_PIP_RESTORE_DIALER);
-            restoreIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            appendLog("Call ended. Returning to the full Automatic Redialer screen.");
-            startActivity(restoreIntent);
-        } catch (RuntimeException e) {
-            appendLog("Could not automatically expand the redialer from PiP: " + e.getMessage());
+        if (android.os.Build.VERSION.SDK_INT >= 26 && isInPictureInPictureMode()) {
+            try {
+                Intent restoreIntent = new Intent(this, AutomaticRedialerActivity.class);
+                restoreIntent.setAction(ACTION_PIP_RESTORE_DIALER);
+                restoreIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                appendLog("Call ended. Opening the full-screen Live Session Feed.");
+                startActivity(restoreIntent);
+            } catch (RuntimeException e) {
+                appendLog("Could not expand the Live Session Feed from PiP: " + e.getMessage());
+                showSessionFeed();
+            }
+        } else {
+            appendLog("Call ended. Showing the full-screen Live Session Feed inside Automatic Redialer.");
+            showSessionFeed();
         }
     }
 
@@ -1341,7 +1559,8 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             refreshCallButtonEnabled();
             Snackbar.make(callButton, "Redial session stopped.", Snackbar.LENGTH_LONG).show();
         } else if (ACTION_PIP_RESTORE_DIALER.equals(intent.getAction())) {
-            appendLog("Automatic Redialer restored after the call ended.");
+            appendLog("Full-screen Live Session Feed opened.");
+            showSessionFeed();
         }
     }
 
@@ -1376,6 +1595,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         }
         refreshLiveLogView();
         refreshPipPanel();
+        refreshSessionFeed();
     }
 
     private void refreshLiveLogView() {
