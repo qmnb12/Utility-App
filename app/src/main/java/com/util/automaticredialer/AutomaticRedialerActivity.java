@@ -1130,11 +1130,14 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         JSONArray history = readCallHistory();
         String previousNumber = null;
         String previousLabel = null;
-        if (history.length() > 0) {
-            JSONObject latest = history.optJSONObject(0);
-            if (latest != null) {
-                previousNumber = latest.optString("number", null);
-                previousLabel = latest.optString("label", previousNumber);
+        for (int i = 0; i < history.length(); i++) {
+            JSONObject entry = history.optJSONObject(i);
+            if (entry == null) continue;
+            String candidate = entry.optString("number", "");
+            if (PhoneNumberHelper.normalizePhoneNumber(candidate, selectedCountryCode()) != null) {
+                previousNumber = candidate;
+                previousLabel = entry.optString("label", candidate);
+                break;
             }
         }
         if (previousNumber == null || previousNumber.trim().isEmpty()) {
