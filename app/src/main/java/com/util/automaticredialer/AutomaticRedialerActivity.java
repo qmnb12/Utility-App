@@ -252,6 +252,14 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
 
         String savedCalls = prefs.getString("no_of_calls", null);
         String savedGap = prefs.getString("call_gap", null);
+        // The previous redial setup used a 3-second gap. Move that old value
+        // to the newly requested 10-second post-disconnect gap, but preserve
+        // any other custom value the user may have selected.
+        if ("3".equals(savedGap)) {
+            savedGap = "10";
+            prefs.edit().putString("call_gap", savedGap).apply();
+            appendLog("Updated the previous 3-second Call Gap to 10 seconds.");
+        }
         String savedDisconnect = prefs.getString("disconnect_sec", "5");
         if (savedCalls != null) noOfCallsTextView.setText(savedCalls);
         if (savedGap != null) callGapTextView.setText(savedGap);
