@@ -379,11 +379,11 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 && manualNumberEditText.getText().toString().trim().length() >= 4;
         boolean batch = batchNumbersEditText != null
                 && batchNumbersEditText.getText().toString().trim().length() >= 4;
-        boolean enabled = (manual || batch || number != null)
-                && !redialSessionRunning && !redialSessionInUse;
+        boolean enabled = (manual || batch || number != null) && !redialSessionRunning;
+        boolean sessionAvailable = !redialSessionInUse;
         callButton.setClickable(enabled);
-        callButton.setAlpha(enabled ? 1f : 0.65f);
-        callButton.setBackgroundColor(enabled
+        callButton.setAlpha(enabled && sessionAvailable ? 1f : 0.65f);
+        callButton.setBackgroundColor(enabled && sessionAvailable
                 ? MainActivity.COLOR10_DARK : MainActivity.COLOR10_LIGHT);
     }
 
