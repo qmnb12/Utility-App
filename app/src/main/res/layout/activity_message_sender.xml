@@ -28,6 +28,27 @@
             android:paddingEnd="16dp"
             tools:context=".messagesender.MessageSenderActivity">
 
+            <TextView
+                android:id="@+id/ms_intro_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/ms_intro_title"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/ms_intro_desc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="8dp"
+                android:lineSpacingExtra="2dp"
+                android:text="@string/ms_intro_desc"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textSize="13sp" />
+
             <Button
                 android:id="@+id/ms_select_contact"
                 android:layout_width="match_parent"
