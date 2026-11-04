@@ -117,7 +117,9 @@ public class CallHistoryActivity extends AppCompatActivity {
             JSONObject item = history.optJSONObject(i);
             if (item == null) continue;
             String number = item.optString("number", "");
-            if (number.trim().isEmpty()) continue;
+            // USSD sessions are not phone-call history entries and cannot be
+            // selected as a dialable phone number here.
+            if (number.trim().isEmpty() || number.startsWith("*") || number.startsWith("#")) continue;
             String label = item.optString("label", number);
             String status = item.optString("status", "Unknown");
             long startedAt = item.optLong("startedAt", 0L);
