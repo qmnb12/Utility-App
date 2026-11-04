@@ -7,6 +7,7 @@ import android.app.RemoteAction;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -113,14 +114,18 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
 
     private static final String ACTION_PIP_STOP_SESSION =
             "com.util.automaticredialer.action.PIP_STOP_SESSION";
+    private static final String ACTION_PIP_RESTORE_DIALER =
+            "com.util.automaticredialer.action.PIP_RESTORE_DIALER";
+    private static final int ACTION_BLUE = Color.rgb(25, 118, 210);
+    private static final int ACTION_GREEN = Color.rgb(46, 160, 91);
+    private static final int ACTION_RED = Color.rgb(211, 47, 47);
+    private boolean stopButtonWasPressed;
     private View standardHeaderView;
     private View standardContentView;
     private LinearLayout pipPanel;
     private TextView pipStatusText;
     private TextView pipNumberText;
     private TextView pipLogText;
-    private android.content.BroadcastReceiver pipStopReceiver;
-    private boolean pipStopReceiverRegistered;
     private boolean pipFeatureAvailable;
     private boolean pipAutoEnterAllowed;
     private boolean pipUnavailableLogged;
@@ -195,6 +200,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         myInit();
+        handlePipActionIntent(getIntent());
         if (savedInstanceState != null) {
             String restoredLog = savedInstanceState.getString("automatic_redialer_live_log");
             if (restoredLog != null && !restoredLog.isEmpty()) {
@@ -215,7 +221,6 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         setupPipPanel(activityRoot);
         pipFeatureAvailable = getPackageManager().hasSystemFeature(
                 PackageManager.FEATURE_PICTURE_IN_PICTURE);
-        registerPipStopReceiver();
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         baseContext = getBaseContext();
         prefs = getSharedPreferences("ar_prefs", Context.MODE_PRIVATE);
@@ -321,7 +326,9 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
 
         currentNoOfCalls.setVisibility(View.INVISIBLE);
         stopCallingButton.setClickable(false);
-        stopCallingButton.setBackgroundColor(MainActivity.COLOR30_LIGHT);
+        stopCallingButton.setEnabled(false);
+        stopCallingButton.setBackgroundTintList(ColorStateList.valueOf(ACTION_BLUE));
+        stopCallingButton.setTextColor(Color.WHITE);
 
         manualNumberEditText.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
@@ -513,13 +520,18 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
 
         stopCallingButton.setOnClickListener(v -> {
             boolean wasRunning = redialSessionRunning;
+            stopButtonWasPressed = true;
             if (wasRunning) {
-                appendLog("Stop pressed. Further attempts will stop; any current phone call is not ended automatically.");
+                appendLog("Stop pressed. The redial queue and any scheduled next attempt have been cancelled. The current phone call is not ended automatically.");
             } else {
                 appendLog("Stop pressed, but no redial session was running.");
             }
             stopCallingLoop();
-            if (wasRunning) Snackbar.make(v, "Redial session stopped.", Snackbar.LENGTH_LONG).show();
+            refreshCallButtonEnabled();
+            if (wasRunning) {
+                Snackbar.make(v, "Redial stopped. The current call, if connected, must be ended in the Phone app.",
+                        Snackbar.LENGTH_LONG).show();
+            }
         });
     }
 
@@ -531,10 +543,30 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 && batchNumbersEditText.getText().toString().trim().length() >= 4;
         boolean enabled = (manual || batch || number != null) && !redialSessionRunning;
         boolean sessionAvailable = !redialSessionInUse;
-        callButton.setClickable(enabled);
-        callButton.setAlpha(enabled && sessionAvailable ? 1f : 0.65f);
-        callButton.setBackgroundColor(enabled && sessionAvailable
-                ? MainActivity.COLOR10_DARK : MainActivity.COLOR10_LIGHT);
+        callButton.setClickable(enabled && sessionAvailable);
+        callButton.setEnabled(enabled && sessionAvailable);
+        callButton.setAlpha(redialSessionRunning ? 1f
+                : (enabled && sessionAvailable ? 1f : 0.65f));
+        callButton.setBackgroundTintList(ColorStateList.valueOf(
+                redialSessionRunning ? ACTION_GREEN : ACTION_BLUE));
+        callButton.setTextColor(Color.WHITE);
+        if (redialSessionRunning) {
+            callButton.setText("Calling...");
+        } else if (name != null && !name.trim().isEmpty()) {
+            callButton.setText(getString(R.string.ar_default_call_text, name));
+        } else {
+            callButton.setText(R.string.ar_call);
+        }
+
+        if (stopCallingButton != null) {
+            stopCallingButton.setClickable(redialSessionRunning);
+            stopCallingButton.setEnabled(redialSessionRunning);
+            stopCallingButton.setAlpha(redialSessionRunning || stopButtonWasPressed ? 1f : 0.65f);
+            stopCallingButton.setBackgroundTintList(ColorStateList.valueOf(
+                    stopButtonWasPressed ? ACTION_RED : ACTION_BLUE));
+            stopCallingButton.setTextColor(Color.WHITE);
+            stopCallingButton.setText(stopButtonWasPressed ? "Stopped" : "Stop");
+        }
     }
 
     private void addMaximumWatcher(EditText field, int maximum) {
@@ -670,8 +702,9 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             appendLog("Background session enabled automatically so the next call can run while the Phone app is open.");
         }
 
+        stopButtonWasPressed = false;
         stopCallingButton.setClickable(true);
-        stopCallingButton.setBackgroundColor(MainActivity.COLOR30_DARK);
+        stopCallingButton.setEnabled(true);
         currentNoOfCalls.setVisibility(View.VISIBLE);
         currentNoOfCalls.setText(getString(R.string.ar_current_no_of_call, 0));
         callGapMillis = gapSeconds * 1000L;
@@ -679,6 +712,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             redialSessionInUse = true;
             redialSessionRunning = true;
             waitingForAppVisibleLogged = false;
+            refreshCallButtonEnabled();
             RedialSessionService.start(this);
             appendLog("Foreground session service started. The redial queue can stay active while the Phone app is open.");
             callButton.setClickable(false);
@@ -849,6 +883,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         sawCallState = false;
         clearDisconnectScheduling();
         updatePipAutoEnter(false);
+        restoreAutomaticRedialerFromPip();
         if (!redialSessionRunning || !hadActiveAttempt) return;
         appendLog("Call attempt finished. Remaining attempts: " + remaining + ".");
         if (remaining <= 0) {
@@ -990,7 +1025,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         }
         if (stopCallingButton != null) {
             stopCallingButton.setClickable(false);
-            stopCallingButton.setBackgroundColor(MainActivity.COLOR30_LIGHT);
+            stopCallingButton.setEnabled(false);
         }
         if (callStateReceiver != null) {
             try {
@@ -1004,6 +1039,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         totalCalls = 0;
         batchIndex = 0;
         batchNumbers = null;
+        refreshCallButtonEnabled();
     }
 
     private void updateDisconnectModeInfo(int mode) {
@@ -1103,14 +1139,14 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         TextView title = new TextView(this);
         title.setText("AUTOMATIC REDIALER");
         title.setTextColor(Color.rgb(125, 181, 255));
-        title.setTextSize(11);
+        title.setTextSize(12);
         title.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
         pipPanel.addView(title, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         pipStatusText = new TextView(this);
         pipStatusText.setTextColor(Color.WHITE);
-        pipStatusText.setTextSize(14);
+        pipStatusText.setTextSize(16);
         pipStatusText.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
         LinearLayout.LayoutParams statusParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1119,8 +1155,8 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
 
         pipNumberText = new TextView(this);
         pipNumberText.setTextColor(Color.rgb(205, 218, 236));
-        pipNumberText.setTextSize(12);
-        pipNumberText.setMaxLines(1);
+        pipNumberText.setTextSize(14);
+        pipNumberText.setMaxLines(2);
         pipNumberText.setEllipsize(android.text.TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams numberParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1129,9 +1165,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
 
         pipLogText = new TextView(this);
         pipLogText.setTextColor(Color.rgb(170, 190, 215));
-        pipLogText.setTextSize(10);
+        pipLogText.setTextSize(13);
         pipLogText.setTypeface(android.graphics.Typeface.MONOSPACE);
-        pipLogText.setMaxLines(3);
+        pipLogText.setLineSpacing(dp(2), 1.0f);
+        pipLogText.setMaxLines(8);
         pipLogText.setEllipsize(android.text.TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams logParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
@@ -1145,32 +1182,6 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
 
     private int dp(float value) {
         return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
-    }
-
-    private void registerPipStopReceiver() {
-        pipStopReceiver = new android.content.BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                if (intent != null && ACTION_PIP_STOP_SESSION.equals(intent.getAction())) {
-                    appendLog("Stop selected from the Picture-in-Picture controls.");
-                    stopCallingLoop();
-                    refreshPipPanel();
-                }
-            }
-        };
-        android.content.IntentFilter filter =
-                new android.content.IntentFilter(ACTION_PIP_STOP_SESSION);
-        try {
-            if (android.os.Build.VERSION.SDK_INT >= 33) {
-                registerReceiver(pipStopReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
-            } else {
-                registerReceiver(pipStopReceiver, filter);
-            }
-            pipStopReceiverRegistered = true;
-        } catch (Exception e) {
-            pipStopReceiver = null;
-            appendLog("PiP stop control could not be registered.");
-        }
     }
 
     private void preparePipForCurrentCall() {
@@ -1189,7 +1200,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         if (!isInPictureInPictureMode()) {
             try {
                 enterPictureInPictureMode(new PictureInPictureParams.Builder()
-                        .setAspectRatio(new Rational(16, 9))
+                        .setAspectRatio(new Rational(9, 16))
                         .setActions(buildPipActions())
                         .build());
                 appendLog("Opening compact Live Log before the Phone call screen.");
@@ -1217,9 +1228,12 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     }
 
     private java.util.List<RemoteAction> buildPipActions() {
-        Intent stopIntent = new Intent(ACTION_PIP_STOP_SESSION);
-        stopIntent.setPackage(getPackageName());
-        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(
+        Intent stopIntent = new Intent(this, AutomaticRedialerActivity.class);
+        stopIntent.setAction(ACTION_PIP_STOP_SESSION);
+        stopIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        PendingIntent stopPendingIntent = PendingIntent.getActivity(
                 this, 4103, stopIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         RemoteAction stopAction = new RemoteAction(
@@ -1289,7 +1303,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         if (target == null || target.trim().isEmpty()) target = name;
         if (target == null || target.trim().isEmpty()) target = "No active number";
         if (pipNumberText != null) pipNumberText.setText(target);
-        if (pipLogText != null) pipLogText.setText(getLatestLogLines(3));
+        if (pipLogText != null) pipLogText.setText(getLatestLogLines(6));
     }
 
     private String getLatestLogLines(int maxLines) {
@@ -1302,6 +1316,41 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             latest.append(lines[i]);
         }
         return latest.length() == 0 ? getString(R.string.ar_live_log_empty) : latest.toString();
+    }
+
+    private void restoreAutomaticRedialerFromPip() {
+        if (android.os.Build.VERSION.SDK_INT < 26 || !isInPictureInPictureMode()) return;
+        try {
+            Intent restoreIntent = new Intent(this, AutomaticRedialerActivity.class);
+            restoreIntent.setAction(ACTION_PIP_RESTORE_DIALER);
+            restoreIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+            appendLog("Call ended. Returning to the full Automatic Redialer screen.");
+            startActivity(restoreIntent);
+        } catch (RuntimeException e) {
+            appendLog("Could not automatically expand the redialer from PiP: " + e.getMessage());
+        }
+    }
+
+    private void handlePipActionIntent(Intent intent) {
+        if (intent == null) return;
+        if (ACTION_PIP_STOP_SESSION.equals(intent.getAction())) {
+            stopButtonWasPressed = true;
+            appendLog("Stop selected from the Picture-in-Picture controls.");
+            stopCallingLoop();
+            refreshCallButtonEnabled();
+            Snackbar.make(callButton, "Redial session stopped.", Snackbar.LENGTH_LONG).show();
+        } else if (ACTION_PIP_RESTORE_DIALER.equals(intent.getAction())) {
+            appendLog("Automatic Redialer restored after the call ended.");
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handlePipActionIntent(intent);
     }
 
     private void showError(String message) {
@@ -1477,12 +1526,6 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
         stopCallingLoop();
-        if (pipStopReceiverRegistered && pipStopReceiver != null) {
-            try {
-                unregisterReceiver(pipStopReceiver);
-            } catch (Exception ignored) { }
-            pipStopReceiverRegistered = false;
-        }
         super.onDestroy();
     }
 }
