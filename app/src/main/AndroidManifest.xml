@@ -60,6 +60,10 @@
         </service>
 
         <activity
+            android:name=".automaticredialer.CallHistoryActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".automaticredialer.AutomaticRedialerActivity"
             android:exported="false" />
 
