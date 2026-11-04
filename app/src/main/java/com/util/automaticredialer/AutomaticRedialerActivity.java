@@ -1226,7 +1226,9 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 Icon.createWithResource(this, android.R.drawable.ic_media_pause),
                 "Stop redial", "Stop the automatic redial session", stopPendingIntent);
         stopAction.setEnabled(redialSessionRunning);
-        stopAction.setShouldShowIcon(true);
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+            stopAction.setShouldShowIcon(true);
+        }
         return java.util.Collections.singletonList(stopAction);
     }
 
