@@ -551,7 +551,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 redialSessionRunning ? ACTION_GREEN : ACTION_BLUE));
         callButton.setTextColor(Color.WHITE);
         if (redialSessionRunning) {
-            callButton.setText("Calling...");
+            callButton.setText("Redialing...");
         } else if (name != null && !name.trim().isEmpty()) {
             callButton.setText(getString(R.string.ar_default_call_text, name));
         } else {
@@ -1312,7 +1312,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         int start = Math.max(0, lines.length - maxLines);
         for (int i = start; i < lines.length; i++) {
             if (lines[i].trim().isEmpty()) continue;
-            if (latest.length() > 0) latest.append("\\n");
+            if (latest.length() > 0) latest.append("\n");
             latest.append(lines[i]);
         }
         return latest.length() == 0 ? getString(R.string.ar_live_log_empty) : latest.toString();
