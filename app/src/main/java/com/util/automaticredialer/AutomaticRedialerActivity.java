@@ -550,7 +550,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                         scheduleEndCall(pickupDisconnectSec);
                     }
                 } else if (TelephonyManager.EXTRA_STATE_IDLE.equals(state)
-                        && currentCallLaunched && (sawCallState || waitingForPickup)) {
+                        && currentCallLaunched) {
+                    // IDLE is the definitive end of the current call attempt.
+                    // Do not require OFFHOOK first: an unanswered/ringing call can
+                    // return directly to IDLE, and the call-gap timer must start then.
                     finishCurrentCall();
                 }
             }
