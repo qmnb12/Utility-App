@@ -13,6 +13,12 @@
 - Auto-disconnect uses the public `TelecomManager.endCall()` API and requires `ANSWER_PHONE_CALLS` on Android 9+. There is no hidden `ITelephony` reflection fallback.
 - Android background-activity-launch restrictions mean an app must not try to launch the next `ACTION_CALL` from the background. The background checkbox preserves the session state, but a new call is launched only while the Activity is visible. OEM/carrier call-state behavior may still vary.
 
+## Outgoing call audio
+- The Automatic Redialer stores the preferred outgoing cellular-call audio route in `ar_prefs` as `call_on_speaker`.
+- Outgoing `ACTION_CALL` intents include `TelecomManager.EXTRA_START_CALL_WITH_SPEAKERPHONE`. True requests speakerphone; false leaves the normal non-speaker route (typically earpiece, unless a connected headset takes priority).
+- The preference is also used by Feature Hub Direct Dial and Dial from Clipboard.
+- USSD sessions do not use this audio route preference.
+
 ## Message Sender
 - Repeated SMS sends are foreground-only. Leaving the Message Sender screen cancels the active loop; no background preference is read unless a real foreground-service implementation is added later.
 - All SMS uses the shared `SmsDispatch` helper and multipart send API, including short messages. Per-part send results are recorded by `SmsStatusReceiver`.

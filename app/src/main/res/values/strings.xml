@@ -25,6 +25,10 @@
     <string name="ar_batch_numbers_label">Batch Numbers</string>
     <string name="ar_batch_numbers_hint">कॉमा या नई लाइन से अलग कई नंबर डालें\nजैसे: 9810000001, 9810000002</string>
     <string name="ar_ussd_mode">USSD Mode (एक code डालें, जैसे *123#)</string>
+    <string name="ar_audio_route_label">Outgoing Call Audio</string>
+    <string name="ar_audio_route_earpiece">Earpiece</string>
+    <string name="ar_audio_route_speaker">Loudspeaker</string>
+    <string name="ar_audio_route_info">Selected route is requested when each call starts. Bluetooth or wired headsets may take priority. USSD is not affected.</string>
     <string name="ar_run_in_background">Keep session in background; next call waits until this app is visible</string>
     <string name="ar_call">Call</string>
     <string name="ar_stop">Stop</string>

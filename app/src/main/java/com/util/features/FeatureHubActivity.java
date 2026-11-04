@@ -13,6 +13,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.telecom.TelecomManager;
 import android.telephony.SmsManager;
 import android.text.InputType;
 import android.view.Gravity;
@@ -391,7 +392,7 @@ public class FeatureHubActivity extends AppCompatActivity {
                         return;
                     }
                     try {
-                        startActivity(new Intent(Intent.ACTION_CALL, Uri.fromParts("tel", number, null)));
+                        startActivity(createCallIntent(number));
                         addHistory("Started direct call to " + PhoneNumberHelper.maskNumber(number));
                     } catch (Exception e) {
                         toast("Could not start call: " + e.getMessage());
@@ -424,7 +425,7 @@ public class FeatureHubActivity extends AppCompatActivity {
                             return;
                         }
                         try {
-                            startActivity(new Intent(Intent.ACTION_CALL, Uri.fromParts("tel", number, null)));
+                            startActivity(createCallIntent(number));
                             addHistory("Started clipboard call to " + PhoneNumberHelper.maskNumber(number));
                         } catch (Exception e) {
                             toast("Could not start call: " + e.getMessage());
@@ -434,6 +435,14 @@ public class FeatureHubActivity extends AppCompatActivity {
         } catch (Exception e) {
             toast("Could not read clipboard.");
         }
+    }
+
+    private Intent createCallIntent(String number) {
+        Intent intent = new Intent(Intent.ACTION_CALL, Uri.fromParts("tel", number, null));
+        boolean startOnSpeaker = getSharedPreferences("ar_prefs", MODE_PRIVATE)
+                .getBoolean("call_on_speaker", false);
+        intent.putExtra(TelecomManager.EXTRA_START_CALL_WITH_SPEAKERPHONE, startOnSpeaker);
+        return intent;
     }
 
     private void deviceInfoDialog() {

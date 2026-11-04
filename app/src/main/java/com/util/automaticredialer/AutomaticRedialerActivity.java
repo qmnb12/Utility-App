@@ -64,6 +64,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private EditText batchNumbersEditText;
     private Spinner countryCodeSpinner;
     private RadioGroup disconnectModeGroup;
+    private RadioGroup audioRouteGroup;
     private CheckBox ussdModeCheckBox;
     private CheckBox runInBgCheckBox;
     private Button callButton;
@@ -131,6 +132,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         disconnectSecEditText = findViewById(R.id.ar_disconnect_sec);
         countryCodeSpinner = findViewById(R.id.ar_country_code_spinner);
         disconnectModeGroup = findViewById(R.id.ar_disconnect_mode_group);
+        audioRouteGroup = findViewById(R.id.ar_audio_route_group);
         batchNumbersEditText = findViewById(R.id.ar_batch_numbers);
         ussdModeCheckBox = findViewById(R.id.ar_ussd_mode);
         runInBgCheckBox = findViewById(R.id.ar_run_in_background);
@@ -160,6 +162,13 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         } else {
             disconnectModeGroup.check(DISCONNECT_OFF);
         }
+
+        boolean startOnSpeaker = prefs.getBoolean("call_on_speaker", false);
+        audioRouteGroup.check(startOnSpeaker
+                ? R.id.ar_audio_route_speaker : R.id.ar_audio_route_earpiece);
+        audioRouteGroup.setOnCheckedChangeListener((group, checkedId) ->
+                prefs.edit().putBoolean("call_on_speaker",
+                        checkedId == R.id.ar_audio_route_speaker).apply());
 
         ussdModeCheckBox.setChecked(prefs.getBoolean("ussd_mode", false));
         ussdModeCheckBox.setOnCheckedChangeListener((btn, checked) ->
@@ -468,6 +477,8 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 .putInt("disconnect_mode", disconnectMode)
                 .putString("country_code", selectedCountryCode())
                 .putBoolean("ussd_mode", ussdMode)
+                .putBoolean("call_on_speaker",
+                        audioRouteGroup.getCheckedRadioButtonId() == R.id.ar_audio_route_speaker)
                 .putBoolean("run_in_background", runInBgCheckBox.isChecked())
                 .apply();
 
@@ -487,8 +498,11 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         }
 
         String mode = ussdMode ? "USSD" : "call";
+        String route = ussdMode ? "" : (prefs.getBoolean("call_on_speaker", false)
+                ? " Loudspeaker" : " Earpiece");
         Snackbar.make(callButton,
-                "Starting " + calls + " " + mode + " attempt(s). Next attempt waits for the previous call to end.",
+                "Starting " + calls + " " + mode + " attempt(s)." + route
+                        + ". Next attempt waits for the previous call to end.",
                 Snackbar.LENGTH_LONG).show();
     }
 
@@ -643,6 +657,13 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 prepareDisconnectBeforeCall();
                 Uri dialUri = Uri.fromParts("tel", target, null);
                 Intent callIntent = new Intent(Intent.ACTION_CALL, dialUri);
+                if (!ussdMode) {
+                    // Android Telecom supports this extra on ACTION_CALL (API 21+).
+                    // false requests the normal non-speaker route (earpiece unless
+                    // Bluetooth or a wired headset is active).
+                    callIntent.putExtra(TelecomManager.EXTRA_START_CALL_WITH_SPEAKERPHONE,
+                            prefs.getBoolean("call_on_speaker", false));
+                }
                 startActivity(callIntent);
                 scheduleDisconnectAfterCallStarts();
 

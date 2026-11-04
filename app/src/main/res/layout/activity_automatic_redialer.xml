@@ -209,6 +209,49 @@
                 android:textColor="@android:color/black"
                 android:textSize="14sp" />
 
+            <TextView
+                android:id="@+id/ar_audio_route_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/ar_audio_route_label"
+                android:textColor="@android:color/black"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/ar_audio_route_group"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp">
+
+                <RadioButton
+                    android:id="@+id/ar_audio_route_earpiece"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:text="@string/ar_audio_route_earpiece"
+                    android:textSize="14sp" />
+
+                <RadioButton
+                    android:id="@+id/ar_audio_route_speaker"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:text="@string/ar_audio_route_speaker"
+                    android:textSize="14sp" />
+            </RadioGroup>
+
+            <TextView
+                android:id="@+id/ar_audio_route_info"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/ar_audio_route_info"
+                android:textColor="#666666"
+                android:textSize="12sp" />
+
             <CheckBox
                 android:id="@+id/ar_run_in_background"
                 android:layout_width="match_parent"
