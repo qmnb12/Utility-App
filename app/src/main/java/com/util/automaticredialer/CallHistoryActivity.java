@@ -72,7 +72,7 @@ public class CallHistoryActivity extends AppCompatActivity {
 
         Button clear = new Button(this);
         clear.setText(R.string.ar_clear_history);
-        clear.setTextAllCaps(false);
+        clear.setAllCaps(false);
         clear.setOnClickListener(v -> confirmClear());
         header.addView(clear, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, dp(44)));
@@ -147,7 +147,7 @@ public class CallHistoryActivity extends AppCompatActivity {
 
             Button select = new Button(this);
             select.setText(R.string.ar_history_use_number);
-            select.setTextAllCaps(false);
+            select.setAllCaps(false);
             select.setTextSize(11);
             select.setOnClickListener(v -> returnSelected(number, label));
             top.addView(select, new LinearLayout.LayoutParams(
