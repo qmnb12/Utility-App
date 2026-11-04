@@ -266,8 +266,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                         name = nameIndex >= 0 ? phoneCursor.getString(nameIndex) : normalized;
                         manualNumberEditText.setText("");
                         callButton.setText(getString(R.string.ar_default_call_text, name));
-                        callButton.setClickable(true);
-                        callButton.setBackgroundColor(MainActivity.COLOR10_DARK);
+                        refreshCallButtonEnabled();
                     } catch (Exception e) {
                         showError("Could not read the selected contact.");
                     } finally {
