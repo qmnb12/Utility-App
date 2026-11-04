@@ -1,22 +1,32 @@
 package com.util.automaticredialer;
 
 import android.Manifest;
+import android.app.PendingIntent;
+import android.app.PictureInPictureParams;
+import android.app.RemoteAction;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.database.Cursor;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.Icon;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.telecom.TelecomManager;
 import android.telephony.TelephonyManager;
+import android.util.Rational;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -100,6 +110,20 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private final SimpleDateFormat logTimeFormat =
             new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
     private boolean waitingForAppVisibleLogged;
+
+    private static final String ACTION_PIP_STOP_SESSION =
+            "com.util.automaticredialer.action.PIP_STOP_SESSION";
+    private View standardHeaderView;
+    private View standardContentView;
+    private LinearLayout pipPanel;
+    private TextView pipStatusText;
+    private TextView pipNumberText;
+    private TextView pipLogText;
+    private android.content.BroadcastReceiver pipStopReceiver;
+    private boolean pipStopReceiverRegistered;
+    private boolean pipFeatureAvailable;
+    private boolean pipAutoEnterAllowed;
+    private boolean pipUnavailableLogged;
 
     private final String[] countryCodes = {
             "+91", "+1", "+44", "+971", "+61", "+65", "+81", "+49", "+33",
@@ -185,6 +209,13 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         ActivityAutomaticRedialerBinding binding =
                 ActivityAutomaticRedialerBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        LinearLayout activityRoot = binding.getRoot();
+        standardHeaderView = activityRoot.getChildAt(0);
+        standardContentView = activityRoot.getChildAt(1);
+        setupPipPanel(activityRoot);
+        pipFeatureAvailable = getPackageManager().hasSystemFeature(
+                PackageManager.FEATURE_PICTURE_IN_PICTURE);
+        registerPipStopReceiver();
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         baseContext = getBaseContext();
         prefs = getSharedPreferences("ar_prefs", Context.MODE_PRIVATE);
@@ -817,6 +848,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         currentCallLaunched = false;
         sawCallState = false;
         clearDisconnectScheduling();
+        updatePipAutoEnter(false);
         if (!redialSessionRunning || !hadActiveAttempt) return;
         appendLog("Call attempt finished. Remaining attempts: " + remaining + ".");
         if (remaining <= 0) {
@@ -898,6 +930,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                     if (telecom == null) {
                         throw new IllegalStateException("Android Telecom service is unavailable.");
                     }
+                    preparePipForCurrentCall();
                     Bundle callExtras = new Bundle();
                     // Preserve the user's selected speaker / earpiece preference.
                     callExtras.putBoolean(TelecomManager.EXTRA_START_CALL_WITH_SPEAKERPHONE,
@@ -945,6 +978,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         handler.removeCallbacks(backgroundStopRunnable);
         handler.removeCallbacks(callStepRunnable);
         clearDisconnectScheduling();
+        updatePipAutoEnter(false);
         try {
             RedialSessionService.stop(this);
         } catch (Exception ignored) { }
@@ -1053,6 +1087,207 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         currentHistoryId = -1L;
     }
 
+    private void setupPipPanel(LinearLayout root) {
+        pipPanel = new LinearLayout(this);
+        pipPanel.setOrientation(LinearLayout.VERTICAL);
+        pipPanel.setGravity(Gravity.CENTER_VERTICAL);
+        int padding = dp(12);
+        pipPanel.setPadding(padding, padding, padding, padding);
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(Color.rgb(13, 21, 37));
+        background.setCornerRadius(dp(16));
+        background.setStroke(dp(1), Color.rgb(56, 112, 190));
+        pipPanel.setBackground(background);
+        pipPanel.setVisibility(View.GONE);
+
+        TextView title = new TextView(this);
+        title.setText("AUTOMATIC REDIALER");
+        title.setTextColor(Color.rgb(125, 181, 255));
+        title.setTextSize(11);
+        title.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
+        pipPanel.addView(title, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        pipStatusText = new TextView(this);
+        pipStatusText.setTextColor(Color.WHITE);
+        pipStatusText.setTextSize(14);
+        pipStatusText.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
+        LinearLayout.LayoutParams statusParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        statusParams.topMargin = dp(4);
+        pipPanel.addView(pipStatusText, statusParams);
+
+        pipNumberText = new TextView(this);
+        pipNumberText.setTextColor(Color.rgb(205, 218, 236));
+        pipNumberText.setTextSize(12);
+        pipNumberText.setMaxLines(1);
+        pipNumberText.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams numberParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        numberParams.topMargin = dp(2);
+        pipPanel.addView(pipNumberText, numberParams);
+
+        pipLogText = new TextView(this);
+        pipLogText.setTextColor(Color.rgb(170, 190, 215));
+        pipLogText.setTextSize(10);
+        pipLogText.setTypeface(android.graphics.Typeface.MONOSPACE);
+        pipLogText.setMaxLines(3);
+        pipLogText.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams logParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        logParams.topMargin = dp(5);
+        pipPanel.addView(pipLogText, logParams);
+
+        root.addView(pipPanel, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        refreshPipPanel();
+    }
+
+    private int dp(float value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private void registerPipStopReceiver() {
+        pipStopReceiver = new android.content.BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (intent != null && ACTION_PIP_STOP_SESSION.equals(intent.getAction())) {
+                    appendLog("Stop selected from the Picture-in-Picture controls.");
+                    stopCallingLoop();
+                    refreshPipPanel();
+                }
+            }
+        };
+        android.content.IntentFilter filter =
+                new android.content.IntentFilter(ACTION_PIP_STOP_SESSION);
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                registerReceiver(pipStopReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                registerReceiver(pipStopReceiver, filter);
+            }
+            pipStopReceiverRegistered = true;
+        } catch (Exception e) {
+            pipStopReceiver = null;
+            appendLog("PiP stop control could not be registered.");
+        }
+    }
+
+    private void preparePipForCurrentCall() {
+        if (!pipFeatureAvailable) {
+            if (!pipUnavailableLogged) {
+                appendLog("Picture-in-Picture is not supported by this device; call UI will use the normal Phone app.");
+                pipUnavailableLogged = true;
+            }
+            updatePipAutoEnter(false);
+            return;
+        }
+        updatePipAutoEnter(true);
+    }
+
+    private void updatePipAutoEnter(boolean enabled) {
+        pipAutoEnterAllowed = enabled && pipFeatureAvailable;
+        if (android.os.Build.VERSION.SDK_INT < 26 || !pipFeatureAvailable) return;
+        try {
+            PictureInPictureParams.Builder builder =
+                    new PictureInPictureParams.Builder()
+                            .setAspectRatio(new Rational(16, 9))
+                            .setActions(buildPipActions());
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                builder.setAutoEnterEnabled(pipAutoEnterAllowed);
+            }
+            setPictureInPictureParams(builder.build());
+        } catch (RuntimeException e) {
+            appendLog("Could not update Picture-in-Picture settings: " + e.getMessage());
+        }
+    }
+
+    private java.util.List<RemoteAction> buildPipActions() {
+        Intent stopIntent = new Intent(ACTION_PIP_STOP_SESSION);
+        stopIntent.setPackage(getPackageName());
+        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(
+                this, 4103, stopIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        RemoteAction stopAction = new RemoteAction(
+                Icon.createWithResource(this, android.R.drawable.ic_media_pause),
+                "Stop redial", "Stop the automatic redial session", stopPendingIntent);
+        stopAction.setEnabled(redialSessionRunning);
+        stopAction.setShouldShowIcon(true);
+        return java.util.Collections.singletonList(stopAction);
+    }
+
+    @Override
+    public void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        // Android 8–11 need an explicit PiP entry request. Android 12+
+        // uses setAutoEnterEnabled() for the smoother automatic transition.
+        if (android.os.Build.VERSION.SDK_INT >= 26
+                && android.os.Build.VERSION.SDK_INT < 31
+                && pipAutoEnterAllowed
+                && currentCallLaunched
+                && !isInPictureInPictureMode()) {
+            try {
+                enterPictureInPictureMode(new PictureInPictureParams.Builder()
+                        .setAspectRatio(new Rational(16, 9))
+                        .setActions(buildPipActions())
+                        .build());
+            } catch (RuntimeException e) {
+                appendLog("Could not enter Picture-in-Picture: " + e.getMessage());
+            }
+        }
+    }
+
+    @Override
+    public void onPictureInPictureModeChanged(
+            boolean isInPictureInPictureMode, Configuration newConfig) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+        if (standardHeaderView != null) {
+            standardHeaderView.setVisibility(isInPictureInPictureMode ? View.GONE : View.VISIBLE);
+        }
+        if (standardContentView != null) {
+            standardContentView.setVisibility(isInPictureInPictureMode ? View.GONE : View.VISIBLE);
+        }
+        if (pipPanel != null) {
+            pipPanel.setVisibility(isInPictureInPictureMode ? View.VISIBLE : View.GONE);
+        }
+        refreshPipPanel();
+        appendLog(isInPictureInPictureMode
+                ? "Compact Live Log opened in Picture-in-Picture."
+                : "Returned from Picture-in-Picture to the full Automatic Redialer screen.");
+    }
+
+    private void refreshPipPanel() {
+        if (pipPanel == null) return;
+        String status;
+        if (redialSessionRunning && currentCallLaunched) {
+            int completed = Math.max(0, totalCalls - remaining);
+            status = "CALL IN PROGRESS  •  " + completed + "/" + totalCalls;
+        } else if (redialSessionRunning) {
+            status = "WAITING FOR NEXT CALL  •  " + remaining + " LEFT";
+        } else {
+            status = "SESSION NOT RUNNING";
+        }
+        if (pipStatusText != null) pipStatusText.setText(status);
+        String target = currentAttemptLabel;
+        if (target == null || target.trim().isEmpty()) target = currentAttemptNumber;
+        if (target == null || target.trim().isEmpty()) target = name;
+        if (target == null || target.trim().isEmpty()) target = "No active number";
+        if (pipNumberText != null) pipNumberText.setText(target);
+        if (pipLogText != null) pipLogText.setText(getLatestLogLines(3));
+    }
+
+    private String getLatestLogLines(int maxLines) {
+        String[] lines = liveLogBuffer.toString().split("\\n");
+        StringBuilder latest = new StringBuilder();
+        int start = Math.max(0, lines.length - maxLines);
+        for (int i = start; i < lines.length; i++) {
+            if (lines[i].trim().isEmpty()) continue;
+            if (latest.length() > 0) latest.append("\\n");
+            latest.append(lines[i]);
+        }
+        return latest.length() == 0 ? getString(R.string.ar_live_log_empty) : latest.toString();
+    }
+
     private void showError(String message) {
         appendLog("ERROR: " + message);
         Snackbar.make(callButton, message, Snackbar.LENGTH_LONG).show();
@@ -1076,6 +1311,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             liveLogBuffer.delete(0, nextLine + 1);
         }
         refreshLiveLogView();
+        refreshPipPanel();
     }
 
     private void refreshLiveLogView() {
@@ -1225,6 +1461,12 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
         stopCallingLoop();
+        if (pipStopReceiverRegistered && pipStopReceiver != null) {
+            try {
+                unregisterReceiver(pipStopReceiver);
+            } catch (Exception ignored) { }
+            pipStopReceiverRegistered = false;
+        }
         super.onDestroy();
     }
 }
