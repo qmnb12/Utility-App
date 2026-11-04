@@ -177,6 +177,15 @@ public class CallHistoryActivity extends AppCompatActivity {
             cardParams.bottomMargin = dp(10);
             entriesContainer.addView(card, cardParams);
         }
+        if (entriesContainer.getChildCount() == 0) {
+            TextView empty = new TextView(this);
+            empty.setText(R.string.ar_history_empty);
+            empty.setTextColor(Color.rgb(100, 112, 128));
+            empty.setTextSize(15);
+            empty.setGravity(Gravity.CENTER);
+            empty.setPadding(dp(20), dp(50), dp(20), dp(50));
+            entriesContainer.addView(empty);
+        }
     }
 
     private void returnSelected(String number, String label) {
