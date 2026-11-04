@@ -418,6 +418,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             appendLog("Call button tapped. Validating settings and permissions...");
             disconnectMode = disconnectModeGroup.getCheckedRadioButtonId();
             if (disconnectMode == -1) disconnectMode = DISCONNECT_OFF;
+            if (disconnectMode == DISCONNECT_PICKUP) {
+                showError("After answer mode requires Default Phone App / InCallService. Select From call start or Manual until that integration is added.");
+                return;
+            }
 
             String typed = manualNumberEditText.getText().toString().trim();
             boolean ussd = ussdModeCheckBox.isChecked();
@@ -651,8 +655,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             appendLog("Session started: " + calls + " " + (ussdMode ? "USSD attempt(s)." : "call attempt(s)."));
             appendLog("Call Gap configured: " + gapSeconds + " second(s), counted only after phone state becomes IDLE.");
             appendLog("Auto-disconnect mode: " + (disconnectMode == DISCONNECT_OFF
-                    ? "Off (manual)." : disconnectMode == DISCONNECT_DIRECT
-                    ? "From call launch." : "After OFFHOOK signal (best effort)."));
+                    ? "Off (manual)." : "From call launch."));
             if (!ussdMode) {
                 appendLog("Audio route requested: " + (prefs.getBoolean("call_on_speaker", false)
                         ? "Loudspeaker." : "Earpiece."));
@@ -737,7 +740,8 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     }
 
     private void prepareDisconnectBeforeCall() {
-        // The pickup countdown must be ready before OFFHOOK can arrive.
+        // The after-answer mode is intentionally blocked until exact call
+        // answer state is provided by an InCallService.
         if (disconnectMode == DISCONNECT_PICKUP) {
             waitingForPickup = false;
             pickupDisconnectSec = getDisconnectDelaySeconds();
