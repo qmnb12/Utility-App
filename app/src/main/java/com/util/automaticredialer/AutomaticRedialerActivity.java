@@ -1232,8 +1232,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         Intent stopIntent = new Intent(this, AutomaticRedialerActivity.class);
         stopIntent.setAction(ACTION_PIP_STOP_SESSION);
         stopIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
-                | Intent.FLAG_ACTIVITY_SINGLE_TOP
-                | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent stopPendingIntent = PendingIntent.getActivity(
                 this, 4103, stopIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
@@ -1325,8 +1324,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             Intent restoreIntent = new Intent(this, AutomaticRedialerActivity.class);
             restoreIntent.setAction(ACTION_PIP_RESTORE_DIALER);
             restoreIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    | Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                    | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             appendLog("Call ended. Returning to the full Automatic Redialer screen.");
             startActivity(restoreIntent);
         } catch (RuntimeException e) {
