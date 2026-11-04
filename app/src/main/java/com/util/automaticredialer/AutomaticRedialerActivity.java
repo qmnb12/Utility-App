@@ -1237,7 +1237,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 this, 4103, stopIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         RemoteAction stopAction = new RemoteAction(
-                Icon.createWithResource(this, android.R.drawable.ic_media_stop),
+                Icon.createWithResource(this, android.R.drawable.ic_media_pause),
                 "Stop redial", "Stop the automatic redial session", stopPendingIntent);
         stopAction.setEnabled(redialSessionRunning);
         if (android.os.Build.VERSION.SDK_INT >= 28) {
