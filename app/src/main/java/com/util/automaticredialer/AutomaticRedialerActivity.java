@@ -716,7 +716,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             RedialSessionService.start(this);
             appendLog("Foreground session service started. The redial queue can stay active while the Phone app is open.");
             callButton.setClickable(false);
-            callButton.setAlpha(0.65f);
+            callButton.setAlpha(1f);
             appendLog("Session started: " + calls + " " + (ussdMode ? "USSD attempt(s)." : "call attempt(s)."));
             appendLog("Call Gap configured: " + gapSeconds + " second(s), counted only after phone state becomes IDLE.");
             appendLog("Auto-disconnect mode: " + (disconnectMode == DISCONNECT_OFF
@@ -1216,7 +1216,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         try {
             PictureInPictureParams.Builder builder =
                     new PictureInPictureParams.Builder()
-                            .setAspectRatio(new Rational(16, 9))
+                            .setAspectRatio(new Rational(9, 16))
                             .setActions(buildPipActions());
             if (android.os.Build.VERSION.SDK_INT >= 31) {
                 builder.setAutoEnterEnabled(pipAutoEnterAllowed);
@@ -1258,7 +1258,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 && !isInPictureInPictureMode()) {
             try {
                 enterPictureInPictureMode(new PictureInPictureParams.Builder()
-                        .setAspectRatio(new Rational(16, 9))
+                        .setAspectRatio(new Rational(9, 16))
                         .setActions(buildPipActions())
                         .build());
             } catch (RuntimeException e) {
