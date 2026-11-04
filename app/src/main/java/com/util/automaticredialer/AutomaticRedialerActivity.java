@@ -24,6 +24,7 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
+import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -39,7 +40,10 @@ import com.util.main.MainActivity;
 import com.util.util.Constants;
 import com.util.util.PhoneNumberHelper;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Locale;
 
 public class AutomaticRedialerActivity extends AppCompatActivity {
     private static final int DISCONNECT_OFF = R.id.ar_mode_off;
@@ -73,6 +77,12 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private CheckBox runInBgCheckBox;
     private Button callButton;
     private Button selectContactButton;
+    private TextView liveLogText;
+    private ScrollView liveLogScroll;
+    private final StringBuilder liveLogBuffer = new StringBuilder();
+    private final SimpleDateFormat logTimeFormat =
+            new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+    private boolean waitingForAppVisibleLogged;
 
     private final String[] countryCodes = {
             "+91", "+1", "+44", "+971", "+61", "+65", "+81", "+49", "+33",
@@ -104,6 +114,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             if (isCallFlowActive()) {
                 handler.postDelayed(this, 3000);
             } else {
+                appendLog("Session stopped: app left the foreground and background mode is disabled.");
                 stopCallingLoop();
             }
         }
@@ -113,6 +124,14 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         myInit();
+        if (savedInstanceState != null) {
+            String restoredLog = savedInstanceState.getString("automatic_redialer_live_log");
+            if (restoredLog != null && !restoredLog.isEmpty()) {
+                liveLogBuffer.setLength(0);
+                liveLogBuffer.append(restoredLog);
+                refreshLiveLogView();
+            }
+        }
     }
 
     private void myInit() {
@@ -147,6 +166,15 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         ussdModeCheckBox = findViewById(R.id.ar_ussd_mode);
         runInBgCheckBox = findViewById(R.id.ar_run_in_background);
         selectContactButton = findViewById(R.id.ar_select_contact);
+        liveLogText = findViewById(R.id.ar_live_log_text);
+        liveLogScroll = findViewById(R.id.ar_live_log_scroll);
+        Button clearLogButton = findViewById(R.id.ar_clear_log);
+        clearLogButton.setOnClickListener(v -> {
+            liveLogBuffer.setLength(0);
+            refreshLiveLogView();
+            appendLog("Log cleared.");
+        });
+        appendLog("Live log ready. Call activity events will appear here.");
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 this, android.R.layout.simple_spinner_item, countryCodes);
@@ -297,17 +325,21 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                     boolean answerGranted = ContextCompat.checkSelfPermission(
                             this, Manifest.permission.ANSWER_PHONE_CALLS) == PackageManager.PERMISSION_GRANTED;
                     if (!callGranted || !stateGranted) {
+                        appendLog("Permission result: required Phone / Phone state permission missing.");
                         showError("Phone and call-state permissions are required for reliable redial.");
                         return;
                     }
                     if (disconnectMode != DISCONNECT_OFF && !answerGranted) {
+                        appendLog("Permission result: auto-disconnect permission missing.");
                         showError("Auto-disconnect permission was not granted. Select Manual mode or grant Phone permission.");
                         return;
                     }
+                    appendLog("Required phone permissions granted.");
                     performRepeatedCalls();
                 });
 
         callButton.setOnClickListener(v -> {
+            appendLog("Call button tapped. Validating settings and permissions...");
             disconnectMode = disconnectModeGroup.getCheckedRadioButtonId();
             if (disconnectMode == -1) disconnectMode = DISCONNECT_OFF;
 
@@ -352,6 +384,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                     && (disconnectMode == DISCONNECT_OFF || answerGranted)) {
                 performRepeatedCalls();
             } else {
+                appendLog("Requesting missing Android phone permissions...");
                 ArrayList<String> required = new ArrayList<>();
                 if (!callGranted) required.add(Manifest.permission.CALL_PHONE);
                 if (!stateGranted) required.add(Manifest.permission.READ_PHONE_STATE);
@@ -368,6 +401,11 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
 
         stopCallingButton.setOnClickListener(v -> {
             boolean wasRunning = redialSessionRunning;
+            if (wasRunning) {
+                appendLog("Stop pressed. Further attempts will stop; any current phone call is not ended automatically.");
+            } else {
+                appendLog("Stop pressed, but no redial session was running.");
+            }
             stopCallingLoop();
             if (wasRunning) Snackbar.make(v, "Redial session stopped.", Snackbar.LENGTH_LONG).show();
         });
@@ -515,9 +553,20 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         try {
             redialSessionInUse = true;
             redialSessionRunning = true;
+            waitingForAppVisibleLogged = false;
             callButton.setClickable(false);
             callButton.setAlpha(0.65f);
+            appendLog("Session started: " + calls + " " + (ussdMode ? "USSD attempt(s)." : "call attempt(s)."));
+            appendLog("Call Gap configured: " + gapSeconds + " second(s), counted only after phone state becomes IDLE.");
+            appendLog("Auto-disconnect mode: " + (disconnectMode == DISCONNECT_OFF
+                    ? "Off (manual)." : disconnectMode == DISCONNECT_DIRECT
+                    ? "From call launch." : "After OFFHOOK signal (best effort)."));
+            if (!ussdMode) {
+                appendLog("Audio route requested: " + (prefs.getBoolean("call_on_speaker", false)
+                        ? "Loudspeaker." : "Earpiece."));
+            }
             registerCallStateListener();
+            appendLog("First attempt queued after the app's initial delay.");
             scheduleNextCall(Constants.AUTOMATIC_REDIALER_INITIAL_DELAY);
         } catch (Exception e) {
             stopCallingLoop();
@@ -542,15 +591,21 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 if (intent == null || !TelephonyManager.ACTION_PHONE_STATE_CHANGED.equals(intent.getAction())) return;
                 String state = intent.getStringExtra(TelephonyManager.EXTRA_STATE);
                 if (TelephonyManager.EXTRA_STATE_OFFHOOK.equals(state)) {
+                    boolean firstOffhookSignal = !sawCallState;
                     sawCallState = true;
                     isCallActive = true;
                     waitingForPickup = false;
+                    if (firstOffhookSignal) {
+                        appendLog("Phone state: OFFHOOK (dialing or active; Android does not confirm that the other person answered).");
+                    }
                     if (disconnectMode == DISCONNECT_PICKUP && currentCallLaunched) {
                         waitingForPickup = false;
+                        appendLog("OFFHOOK received. Starting the after-active-signal disconnect timer.");
                         scheduleEndCall(pickupDisconnectSec);
                     }
                 } else if (TelephonyManager.EXTRA_STATE_IDLE.equals(state)
                         && currentCallLaunched) {
+                    appendLog("Phone state: IDLE. Android reports that this call attempt has ended.");
                     // IDLE is the definitive end of the current call attempt.
                     // Do not require OFFHOOK first: an unanswered/ringing call can
                     // return directly to IDLE, and the call-gap timer must start then.
@@ -561,6 +616,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         try {
             registerReceiver(callStateReceiver,
                     new android.content.IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED));
+            appendLog("Phone-state listener registered.");
         } catch (Exception e) {
             callStateReceiver = null;
             throw e;
@@ -592,6 +648,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         if (disconnectMode == DISCONNECT_PICKUP) {
             waitingForPickup = true;
             pickupDisconnectSec = getDisconnectDelaySeconds();
+            appendLog("After-active-signal mode armed. Waiting for Android OFFHOOK state.");
         }
     }
 
@@ -599,6 +656,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         // Direct mode counts from the ACTION_CALL launch, not from before the intent
         // is dispatched. Pickup mode is armed in prepareDisconnectBeforeCall().
         if (disconnectMode == DISCONNECT_DIRECT) {
+            appendLog("Call intent launched. Starting the from-call-start disconnect countdown.");
             scheduleEndCall(getDisconnectDelaySeconds());
         }
     }
@@ -606,15 +664,22 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private void scheduleEndCall(int delaySeconds) {
         if (!currentCallLaunched || disconnectCountdownStarted) return;
         disconnectCountdownStarted = true;
+        appendLog("Auto-disconnect timer scheduled for " + delaySeconds + " second(s).");
         Runnable endCallRunnable = () -> {
             if (!currentCallLaunched) return;
+            appendLog("Auto-disconnect timer expired. Asking Android Telecom to end the call...");
             boolean hangUpRequested = endCallNow();
+            appendLog(hangUpRequested
+                    ? "Android Telecom accepted the end-call request. Verifying phone state..."
+                    : "Android Telecom did not confirm the end-call request. Verifying phone state...");
             Runnable verifyDisconnect = () -> {
                 if (!currentCallLaunched) return;
                 if (isPhoneCallIdle()) {
+                    appendLog("Disconnect verified: phone state is IDLE.");
                     sawCallState = true;
                     finishCurrentCall();
                 } else {
+                    appendLog("Disconnect not verified after 1.5 seconds. The call may still be active; Call Gap will not start yet.");
                     showError(hangUpRequested
                             ? "Hang-up was requested, but Android has not confirmed disconnect. End the call manually if it continues."
                             : "Android or the phone app blocked auto hang-up. End the call manually.");
@@ -655,10 +720,14 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         sawCallState = false;
         clearDisconnectScheduling();
         if (!redialSessionRunning || !hadActiveAttempt) return;
+        appendLog("Call attempt finished. Remaining attempts: " + remaining + ".");
         if (remaining <= 0) {
+            appendLog("No attempts remaining. Finishing the redial session.");
             finishCalling();
             return;
         }
+        appendLog("Call Gap started: waiting " + (callGapMillis / 1000L)
+                + " second(s) before the next attempt.");
         scheduleNextCall(callGapMillis);
     }
 
@@ -676,9 +745,14 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 return;
             }
             if (!activityResumed) {
+                if (!waitingForAppVisibleLogged) {
+                    appendLog("Next call is waiting until the Automatic Redialer screen becomes visible.");
+                    waitingForAppVisibleLogged = true;
+                }
                 scheduleNextCall(1000L);
                 return;
             }
+            waitingForAppVisibleLogged = false;
 
             boolean ussdMode = ussdModeCheckBox.isChecked();
             String target = batchNumbers != null && !batchNumbers.isEmpty()
@@ -711,6 +785,8 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 remaining--;
                 int completed = totalCalls - remaining;
                 currentNoOfCalls.setText(getString(R.string.ar_current_no_of_call, completed));
+                appendLog("Attempt " + completed + " of " + totalCalls + ": preparing "
+                        + (ussdMode ? "USSD session." : "outgoing call."));
 
                 // Arm pickup state before ACTION_CALL so an immediate OFFHOOK broadcast
                 // cannot race the pickup timer initialization.
@@ -724,7 +800,11 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                     callIntent.putExtra(TelecomManager.EXTRA_START_CALL_WITH_SPEAKERPHONE,
                             prefs.getBoolean("call_on_speaker", false));
                 }
+                appendLog(ussdMode
+                        ? "Opening the Android phone app for the USSD request."
+                        : "Launching outgoing call through Android Telecom.");
                 startActivity(callIntent);
+                appendLog("Android accepted the call-launch intent.");
                 scheduleDisconnectAfterCallStarts();
 
                 if (batchNumbers != null && !batchNumbers.isEmpty()) batchIndex++;
@@ -744,6 +824,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     }
 
     private void finishCalling() {
+        appendLog("Redial session completed successfully: all configured attempts processed.");
         stopCallingLoop();
         currentNoOfCalls.setVisibility(View.INVISIBLE);
         Snackbar.make(callButton, "Redial session completed.", Snackbar.LENGTH_LONG).show();
@@ -793,13 +874,43 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     }
 
     private void showError(String message) {
+        appendLog("ERROR: " + message);
         Snackbar.make(callButton, message, Snackbar.LENGTH_LONG).show();
+    }
+
+    private void appendLog(String message) {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            handler.post(() -> appendLog(message));
+            return;
+        }
+        String entry = "[" + logTimeFormat.format(new Date()) + "] " + message + "\n";
+        liveLogBuffer.append(entry);
+        // Keep the on-screen log bounded so long redial sessions cannot use
+        // unbounded memory. The latest entries are always retained.
+        while (liveLogBuffer.length() > 18000) {
+            int nextLine = liveLogBuffer.indexOf("\n");
+            if (nextLine < 0) {
+                liveLogBuffer.setLength(0);
+                break;
+            }
+            liveLogBuffer.delete(0, nextLine + 1);
+        }
+        refreshLiveLogView();
+    }
+
+    private void refreshLiveLogView() {
+        if (liveLogText == null) return;
+        liveLogText.setText(liveLogBuffer.toString());
+        if (liveLogScroll != null) {
+            liveLogScroll.post(() -> liveLogScroll.fullScroll(View.FOCUS_DOWN));
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         activityResumed = true;
+        if (redialSessionRunning) appendLog("Automatic Redialer screen resumed.");
         if (currentCallLaunched) {
             try {
                 TelephonyManager phone =
@@ -823,6 +934,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         activityResumed = false;
+        if (redialSessionRunning) appendLog("App screen paused (for example, while the phone app is open).");
         super.onPause();
     }
 
@@ -831,11 +943,18 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         super.onStop();
         if (isChangingConfigurations()) return;
         if (isFinishing()) {
+            if (redialSessionRunning) appendLog("Automatic Redialer screen is closing; stopping the session.");
             stopCallingLoop();
             return;
         }
         boolean runInBackground = prefs != null && prefs.getBoolean("run_in_background", false);
         if (!runInBackground) handler.postDelayed(backgroundStopRunnable, 3000);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putString("automatic_redialer_live_log", liveLogBuffer.toString());
+        super.onSaveInstanceState(outState);
     }
 
     @Override
