@@ -566,7 +566,8 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                         ? "Loudspeaker." : "Earpiece."));
             }
             registerCallStateListener();
-            appendLog("First attempt queued after the app's initial delay.");
+            appendLog("First attempt queued after " +
+                    (Constants.AUTOMATIC_REDIALER_INITIAL_DELAY / 1000L) + " second(s).");
             scheduleNextCall(Constants.AUTOMATIC_REDIALER_INITIAL_DELAY);
         } catch (Exception e) {
             stopCallingLoop();
@@ -916,12 +917,17 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 TelephonyManager phone =
                         (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
                 if (phone != null && phone.getCallState() == TelephonyManager.CALL_STATE_IDLE) {
+                    appendLog("Phone state check on return: IDLE. The previous call attempt has ended.");
                     finishCurrentCall();
                 } else if (phone != null && phone.getCallState() == TelephonyManager.CALL_STATE_OFFHOOK) {
+                    if (!sawCallState) {
+                        appendLog("Phone state check on return: OFFHOOK (dialing or active; answer is not confirmed).");
+                    }
                     sawCallState = true;
                     isCallActive = true;
                     if (disconnectMode == DISCONNECT_PICKUP && waitingForPickup) {
                         waitingForPickup = false;
+                        appendLog("OFFHOOK found on return. Starting the after-active-signal disconnect timer.");
                         scheduleEndCall(pickupDisconnectSec);
                     }
                 }
