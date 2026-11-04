@@ -44,6 +44,10 @@
     <string name="ar_run_in_background">Keep session in background; next call waits until this app is visible</string>
     <string name="ar_call">Call</string>
     <string name="ar_stop">Stop</string>
+    <string name="ar_live_log_title">Live App Log</string>
+    <string name="ar_live_log_desc">Real-time steps performed by the app. The latest events appear at the bottom.</string>
+    <string name="ar_live_log_empty">Waiting for activity…</string>
+    <string name="ar_clear_log">Clear</string>
 
     <string-array name="country_codes">
         <item>+91</item>
