@@ -30,6 +30,7 @@ import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
@@ -81,10 +82,12 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private CheckBox runInBgCheckBox;
     private Button callButton;
     private Button selectContactButton;
+    private Button lastCallButton;
+    private Button historyButton;
+    private Button liveLogButton;
     private TextView liveLogText;
     private ScrollView liveLogScroll;
-    private TextView callHistoryText;
-    private ScrollView callHistoryScroll;
+    private AlertDialog liveLogDialog;
     private final StringBuilder liveLogBuffer = new StringBuilder();
     private static final String PREF_LAST_NUMBER = "last_used_number";
     private static final String PREF_LAST_NAME = "last_used_name";
@@ -133,10 +136,9 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                         sawCallState = true;
                         isCallActive = true;
                         waitingForPickup = false;
-                        appendLog("Phone-state polling fallback: OFFHOOK detected.");
+                        appendLog("Phone-state polling fallback: OFFHOOK detected (dialing or active; answer not confirmed).");
                         if (disconnectMode == DISCONNECT_PICKUP) {
-                            appendLog("Starting after-active-signal timer from the polled OFFHOOK state.");
-                            scheduleEndCall(pickupDisconnectSec);
+                            appendLog("OFFHOOK is not proof of answer. No timer started; waiting for a reliable InCallService event.");
                         }
                     } else if (state == TelephonyManager.CALL_STATE_IDLE && sawCallState) {
                         appendLog("Phone-state polling fallback: IDLE detected. The call ended; starting Call Gap.");
@@ -211,24 +213,12 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         ussdModeCheckBox = findViewById(R.id.ar_ussd_mode);
         runInBgCheckBox = findViewById(R.id.ar_run_in_background);
         selectContactButton = findViewById(R.id.ar_select_contact);
-        liveLogText = findViewById(R.id.ar_live_log_text);
-        liveLogScroll = findViewById(R.id.ar_live_log_scroll);
-        Button clearLogButton = findViewById(R.id.ar_clear_log);
-        clearLogButton.setOnClickListener(v -> {
-            liveLogBuffer.setLength(0);
-            refreshLiveLogView();
-            appendLog("Log cleared.");
-        });
-        callHistoryText = findViewById(R.id.ar_call_history_text);
-        callHistoryScroll = findViewById(R.id.ar_call_history_scroll);
-        Button clearHistoryButton = findViewById(R.id.ar_clear_history);
-        clearHistoryButton.setOnClickListener(v -> {
-            prefs.edit().remove(PREF_CALL_HISTORY).apply();
-            refreshCallHistoryView();
-            appendLog("Saved call history cleared.");
-        });
-        refreshCallHistoryView();
-        appendLog("Live log ready. Call activity events will appear here.");
+        liveLogText = null;
+        liveLogScroll = null;
+        lastCallButton = findViewById(R.id.ar_last_call);
+        historyButton = findViewById(R.id.ar_open_history);
+        liveLogButton = findViewById(R.id.ar_open_log);
+        appendLog("Live log ready. Open it from the quick-action icon.");
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 this, android.R.layout.simple_spinner_item, countryCodes);
@@ -387,6 +377,20 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 requestContactsPermission.launch(Manifest.permission.READ_CONTACTS);
             }
         });
+
+        lastCallButton.setOnClickListener(v -> selectLastCall());
+
+        ActivityResultLauncher<Intent> chooseHistoryCall =
+                registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                    if (result.getResultCode() != RESULT_OK || result.getData() == null) return;
+                    String selectedNumber = result.getData().getStringExtra(CallHistoryActivity.EXTRA_NUMBER);
+                    String selectedLabel = result.getData().getStringExtra(CallHistoryActivity.EXTRA_LABEL);
+                    applySelectedNumber(selectedNumber, selectedLabel);
+                });
+        historyButton.setOnClickListener(v ->
+                chooseHistoryCall.launch(new Intent(this, CallHistoryActivity.class)));
+
+        liveLogButton.setOnClickListener(v -> showLiveLogDialog());
 
         ActivityResultLauncher<String[]> requestCallPermissions =
                 registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
@@ -600,6 +604,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             showError("Automatic hang-up is supported only on Android 9 and later.");
             return;
         }
+        if (disconnectMode == DISCONNECT_PICKUP) {
+            showError("After answer mode needs the app to be the Default Phone App with InCallService. OFFHOOK cannot confirm an answer, so this mode is paused to prevent early hang-ups.");
+            return;
+        }
 
         ArrayList<String> requestedBatchNumbers = batchNumbers;
         stopCallingLoop();
@@ -685,8 +693,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                     }
                     if (disconnectMode == DISCONNECT_PICKUP && currentCallLaunched) {
                         waitingForPickup = false;
-                        appendLog("OFFHOOK received. Starting the after-active-signal disconnect timer.");
-                        scheduleEndCall(pickupDisconnectSec);
+                        appendLog("OFFHOOK is not proof the other person answered. No after-answer timer started.");
                     }
                 } else if (TelephonyManager.EXTRA_STATE_IDLE.equals(state)
                         && currentCallLaunched) {
@@ -732,9 +739,9 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private void prepareDisconnectBeforeCall() {
         // The pickup countdown must be ready before OFFHOOK can arrive.
         if (disconnectMode == DISCONNECT_PICKUP) {
-            waitingForPickup = true;
+            waitingForPickup = false;
             pickupDisconnectSec = getDisconnectDelaySeconds();
-            appendLog("After-active-signal mode armed. Waiting for Android OFFHOOK state.");
+            appendLog("After-answer mode selected. OFFHOOK will not start the timer because it cannot confirm that the other person answered.");
         }
     }
 
@@ -1018,7 +1025,6 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             }
         }
         prefs.edit().putString(PREF_CALL_HISTORY, newHistory.toString()).apply();
-        refreshCallHistoryView();
     }
 
     private void updateCurrentCallHistory(String status) {
@@ -1041,40 +1047,6 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         }
         prefs.edit().putString(PREF_CALL_HISTORY, updatedHistory.toString()).apply();
         currentHistoryId = -1L;
-        refreshCallHistoryView();
-    }
-
-    private void refreshCallHistoryView() {
-        if (callHistoryText == null || prefs == null) return;
-        JSONArray history = readCallHistory();
-        if (history.length() == 0) {
-            callHistoryText.setText(R.string.ar_history_empty);
-            return;
-        }
-        StringBuilder text = new StringBuilder();
-        SimpleDateFormat historyTime = new SimpleDateFormat("dd MMM yyyy, HH:mm:ss", Locale.getDefault());
-        for (int i = 0; i < history.length(); i++) {
-            JSONObject entry = history.optJSONObject(i);
-            if (entry == null) continue;
-            long startedAt = entry.optLong("startedAt", 0L);
-            String label = entry.optString("label", "");
-            String value = entry.optString("number", "");
-            String status = entry.optString("status", "Unknown");
-            if (label.isEmpty()) label = value;
-            text.append(historyTime.format(new Date(startedAt))).append("\n");
-            text.append(label);
-            if (!value.isEmpty() && !value.equals(label)) {
-                text.append(" • ").append(value);
-            }
-            text.append("\n").append(status);
-            long duration = entry.optLong("durationSeconds", -1L);
-            if (duration >= 0L) text.append(" • ").append(duration).append(" sec");
-            text.append("\n\n");
-        }
-        callHistoryText.setText(text.toString().trim());
-        if (callHistoryScroll != null) {
-            callHistoryScroll.post(() -> callHistoryScroll.fullScroll(View.FOCUS_UP));
-        }
     }
 
     private void showError(String message) {
@@ -1110,6 +1082,84 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         }
     }
 
+    private void showLiveLogDialog() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (12 * getResources().getDisplayMetrics().density);
+        panel.setPadding(pad, pad, pad, pad);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setBackgroundColor(android.graphics.Color.rgb(11, 18, 32));
+        TextView logText = new TextView(this);
+        logText.setTextColor(android.graphics.Color.rgb(215, 226, 240));
+        logText.setTextSize(11);
+        logText.setTypeface(android.graphics.Typeface.MONOSPACE);
+        logText.setPadding(pad, pad, pad, pad);
+        scroll.addView(logText, new ScrollView.LayoutParams(
+                ScrollView.LayoutParams.MATCH_PARENT, ScrollView.LayoutParams.WRAP_CONTENT));
+        panel.addView(scroll, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (int) (360 * getResources().getDisplayMetrics().density)));
+
+        liveLogText = logText;
+        liveLogScroll = scroll;
+        liveLogDialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.ar_live_log_title)
+                .setView(panel)
+                .setNeutralButton(R.string.ar_clear_log, (dialog, which) -> {
+                    liveLogBuffer.setLength(0);
+                    appendLog("Log cleared.");
+                })
+                .setPositiveButton(android.R.string.ok, null)
+                .create();
+        liveLogDialog.setOnDismissListener(dialog -> {
+            liveLogText = null;
+            liveLogScroll = null;
+            liveLogDialog = null;
+        });
+        liveLogDialog.show();
+        refreshLiveLogView();
+    }
+
+    private void selectLastCall() {
+        JSONArray history = readCallHistory();
+        String previousNumber = null;
+        String previousLabel = null;
+        if (history.length() > 0) {
+            JSONObject latest = history.optJSONObject(0);
+            if (latest != null) {
+                previousNumber = latest.optString("number", null);
+                previousLabel = latest.optString("label", previousNumber);
+            }
+        }
+        if (previousNumber == null || previousNumber.trim().isEmpty()) {
+            previousNumber = prefs.getString(PREF_LAST_NUMBER, null);
+            previousLabel = prefs.getString(PREF_LAST_NAME, previousNumber);
+        }
+        if (previousNumber == null || previousNumber.trim().isEmpty()) {
+            showError("No previous number is saved yet.");
+            return;
+        }
+        applySelectedNumber(previousNumber, previousLabel);
+        appendLog("Last call selected and filled into the number field.");
+    }
+
+    private void applySelectedNumber(String selectedNumber, String selectedLabel) {
+        String normalized = PhoneNumberHelper.normalizePhoneNumber(selectedNumber, selectedCountryCode());
+        if (normalized == null) {
+            showError("The selected history entry does not contain a valid phone number.");
+            return;
+        }
+        number = normalized;
+        name = selectedLabel == null || selectedLabel.trim().isEmpty()
+                ? normalized : selectedLabel;
+        saveLastUsedNumber(number, name);
+        manualNumberEditText.setText(number);
+        callButton.setText(getString(R.string.ar_default_call_text, name));
+        refreshCallButtonEnabled();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -1128,10 +1178,8 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                     }
                     sawCallState = true;
                     isCallActive = true;
-                    if (disconnectMode == DISCONNECT_PICKUP && waitingForPickup) {
-                        waitingForPickup = false;
-                        appendLog("OFFHOOK found on return. Starting the after-active-signal disconnect timer.");
-                        scheduleEndCall(pickupDisconnectSec);
+                    if (disconnectMode == DISCONNECT_PICKUP) {
+                        appendLog("Returned OFFHOOK state is not an answer confirmation. No after-answer timer started.");
                     }
                 }
             } catch (SecurityException ignored) { }
