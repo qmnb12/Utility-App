@@ -41,7 +41,10 @@
     <string name="ar_audio_route_earpiece">Earpiece</string>
     <string name="ar_audio_route_speaker">Loudspeaker</string>
     <string name="ar_audio_route_info">Selected route is requested when each call starts. Bluetooth or wired headsets may take priority. USSD is not affected.</string>
-    <string name="ar_run_in_background">Keep session in background; next call waits until this app is visible</string>
+    <string name="ar_run_in_background">Continue automatic redial in background while the Phone app is open</string>
+    <string name="ar_history_title">Recent Call History</string>
+    <string name="ar_history_empty">No call history saved yet.</string>
+    <string name="ar_clear_history">Clear</string>
     <string name="ar_call">Call</string>
     <string name="ar_stop">Stop</string>
     <string name="ar_live_log_title">Live App Log</string>
