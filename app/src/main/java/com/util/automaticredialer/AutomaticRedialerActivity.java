@@ -1013,12 +1013,12 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         handler.removeCallbacks(backgroundStopRunnable);
         handler.removeCallbacks(callStepRunnable);
         clearDisconnectScheduling();
-        updatePipAutoEnter(false);
         try {
             RedialSessionService.stop(this);
         } catch (Exception ignored) { }
         if (redialSessionRunning) redialSessionInUse = false;
         redialSessionRunning = false;
+        updatePipAutoEnter(false);
         if (callButton != null) {
             callButton.setAlpha(1f);
             refreshCallButtonEnabled();
@@ -1040,6 +1040,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         batchIndex = 0;
         batchNumbers = null;
         refreshCallButtonEnabled();
+        refreshPipPanel();
     }
 
     private void updateDisconnectModeInfo(int mode) {
