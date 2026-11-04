@@ -23,7 +23,7 @@
     <string name="ar_call_gap_info">Call gap starts after either side disconnects. Set 10 here to place the next call 10 seconds after the previous call ends.</string>
     <string name="ar_disconnect_info_off">Auto disconnect off hai. Call ko manually end karein.</string>
     <string name="ar_disconnect_info_direct">Timer outgoing call start hote hi chalega. Set time ke baad app unanswered / ringing call ko bhi end karne ki request karega. Hang-up Android ke TelecomManager API par depend karta hai; Android 10+ mein yeh API deprecated hai aur phone manufacturer ise block kar sakta hai.</string>
-    <string name="ar_disconnect_info_pickup">This mode is paused for now. Android OFFHOOK includes both dialing and active calls, so it cannot prove the other person answered. Accurate answer detection requires this app to become the Default Phone App and implement InCallService.</string>
+    <string name="ar_disconnect_info_pickup">Unavailable for now: OFFHOOK also occurs while dialing. Accurate answer detection needs Default Phone App / InCallService.</string>
     <string name="ar_intro_title">Automatic Redialer</string>
     <string name="ar_intro_desc">Sequential calls • Batch numbers • Auto-disconnect • Call Gap</string>
     <string name="ar_default_call_gap">10</string>
@@ -32,7 +32,7 @@
     <string name="ar_disconnect_mode">Auto Disconnect Mode</string>
     <string name="ar_mode_off">Off — Manual disconnect</string>
     <string name="ar_mode_direct">From call start — answered or not</string>
-    <string name="ar_mode_pickup">After answer — Default Phone App required</string>
+    <string name="ar_mode_pickup">After answer — Default Phone App</string>
     <string name="ar_disconnect_sec">Disconnect after (seconds)</string>
     <string name="ar_batch_numbers_label">Batch Numbers</string>
     <string name="ar_batch_numbers_hint">कॉमा या नई लाइन से अलग कई नंबर डालें\nजैसे: 9810000001, 9810000002</string>
