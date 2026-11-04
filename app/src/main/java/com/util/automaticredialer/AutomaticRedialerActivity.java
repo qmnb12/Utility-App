@@ -45,6 +45,10 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class AutomaticRedialerActivity extends AppCompatActivity {
     private static final int DISCONNECT_OFF = R.id.ar_mode_off;
     private static final int DISCONNECT_DIRECT = R.id.ar_mode_direct;
@@ -79,7 +83,17 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private Button selectContactButton;
     private TextView liveLogText;
     private ScrollView liveLogScroll;
+    private TextView callHistoryText;
+    private ScrollView callHistoryScroll;
     private final StringBuilder liveLogBuffer = new StringBuilder();
+    private static final String PREF_LAST_NUMBER = "last_used_number";
+    private static final String PREF_LAST_NAME = "last_used_name";
+    private static final String PREF_CALL_HISTORY = "automatic_call_history";
+    private static final int MAX_CALL_HISTORY = 30;
+    private long currentHistoryId = -1L;
+    private long currentAttemptStartedAt;
+    private String currentAttemptNumber;
+    private String currentAttemptLabel;
     private final SimpleDateFormat logTimeFormat =
             new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
     private boolean waitingForAppVisibleLogged;
@@ -174,6 +188,15 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             refreshLiveLogView();
             appendLog("Log cleared.");
         });
+        callHistoryText = findViewById(R.id.ar_call_history_text);
+        callHistoryScroll = findViewById(R.id.ar_call_history_scroll);
+        Button clearHistoryButton = findViewById(R.id.ar_clear_history);
+        clearHistoryButton.setOnClickListener(v -> {
+            prefs.edit().remove(PREF_CALL_HISTORY).apply();
+            refreshCallHistoryView();
+            appendLog("Saved call history cleared.");
+        });
+        refreshCallHistoryView();
         appendLog("Live log ready. Call activity events will appear here.");
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
@@ -186,6 +209,14 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 countryCodeSpinner.setSelection(i);
                 break;
             }
+        }
+
+        number = prefs.getString(PREF_LAST_NUMBER, null);
+        name = prefs.getString(PREF_LAST_NAME, number);
+        if (number != null && !number.trim().isEmpty()) {
+            if (name == null || name.trim().isEmpty()) name = number;
+            callButton.setText(getString(R.string.ar_default_call_text, name));
+            appendLog("Restored last used number/contact from this device.");
         }
 
         String savedCalls = prefs.getString("no_of_calls", null);
@@ -292,6 +323,8 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                         }
                         number = normalized;
                         name = nameIndex >= 0 ? phoneCursor.getString(nameIndex) : normalized;
+                        saveLastUsedNumber(number, name);
+                        appendLog("Selected contact saved as the last-used contact.");
                         manualNumberEditText.setText("");
                         callButton.setText(getString(R.string.ar_default_call_text, name));
                         refreshCallButtonEnabled();
@@ -360,6 +393,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                     }
                 }
                 name = number;
+                if (!ussd) saveLastUsedNumber(number, name);
                 prefs.edit().putString("country_code", selectedCountryCode()).apply();
                 callButton.setText(getString(R.string.ar_default_call_text, name));
             }
@@ -545,6 +579,12 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 .putBoolean("run_in_background", runInBgCheckBox.isChecked())
                 .apply();
 
+        if (calls > 1 && !runInBgCheckBox.isChecked()) {
+            runInBgCheckBox.setChecked(true);
+            prefs.edit().putBoolean("run_in_background", true).apply();
+            appendLog("Background session enabled automatically so the next call can run while the Phone app is open.");
+        }
+
         stopCallingButton.setClickable(true);
         stopCallingButton.setBackgroundColor(MainActivity.COLOR30_DARK);
         currentNoOfCalls.setVisibility(View.VISIBLE);
@@ -554,6 +594,8 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             redialSessionInUse = true;
             redialSessionRunning = true;
             waitingForAppVisibleLogged = false;
+            RedialSessionService.start(this);
+            appendLog("Foreground session service started. The redial queue can stay active while the Phone app is open.");
             callButton.setClickable(false);
             callButton.setAlpha(0.65f);
             appendLog("Session started: " + calls + " " + (ussdMode ? "USSD attempt(s)." : "call attempt(s)."));
@@ -606,7 +648,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                     }
                 } else if (TelephonyManager.EXTRA_STATE_IDLE.equals(state)
                         && currentCallLaunched) {
-                    appendLog("Phone state: IDLE. Android reports that this call attempt has ended.");
+                    appendLog("Phone state: IDLE. Call ended (whether you or the other person disconnected); starting the configured Call Gap.");
                     // IDLE is the definitive end of the current call attempt.
                     // Do not require OFFHOOK first: an unanswered/ringing call can
                     // return directly to IDLE, and the call-gap timer must start then.
@@ -717,6 +759,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
 
     private void finishCurrentCall() {
         boolean hadActiveAttempt = currentCallLaunched;
+        if (hadActiveAttempt) updateCurrentCallHistory("Call ended");
         currentCallLaunched = false;
         sawCallState = false;
         clearDisconnectScheduling();
@@ -745,16 +788,9 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 finishCalling();
                 return;
             }
-            if (!activityResumed) {
-                if (!waitingForAppVisibleLogged) {
-                    appendLog("Next call is waiting until the Automatic Redialer screen becomes visible.");
-                    waitingForAppVisibleLogged = true;
-                }
-                scheduleNextCall(1000L);
-                return;
-            }
-            waitingForAppVisibleLogged = false;
-
+            // TelecomManager.placeCall() is used for normal calls so the
+            // system Telecom service can receive the queued call while the
+            // Automatic Redialer Activity is paused behind the Phone UI.
             boolean ussdMode = ussdModeCheckBox.isChecked();
             String target = batchNumbers != null && !batchNumbers.isEmpty()
                     ? batchNumbers.get(batchIndex % batchNumbers.size()) : number;
@@ -786,34 +822,46 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 remaining--;
                 int completed = totalCalls - remaining;
                 currentNoOfCalls.setText(getString(R.string.ar_current_no_of_call, completed));
+                currentAttemptNumber = target;
+                currentAttemptLabel = (!ussdMode && target.equals(number)
+                        && name != null && !name.trim().isEmpty()) ? name : target;
+                currentAttemptStartedAt = System.currentTimeMillis();
+                beginCallHistory(target, currentAttemptLabel, ussdMode ? "USSD started" : "Calling");
+                if (!ussdMode) saveLastUsedNumber(target, currentAttemptLabel);
                 appendLog("Attempt " + completed + " of " + totalCalls + ": preparing "
                         + (ussdMode ? "USSD session." : "outgoing call."));
 
-                // Arm pickup state before ACTION_CALL so an immediate OFFHOOK broadcast
+                // Arm pickup state before Telecom is asked to place the call.
                 // cannot race the pickup timer initialization.
                 prepareDisconnectBeforeCall();
                 Uri dialUri = Uri.fromParts("tel", target, null);
-                Intent callIntent = new Intent(Intent.ACTION_CALL, dialUri);
-                if (!ussdMode) {
-                    // Android Telecom supports this extra on ACTION_CALL (API 21+).
-                    // false requests the normal non-speaker route (earpiece unless
-                    // Bluetooth or a wired headset is active).
-                    callIntent.putExtra(TelecomManager.EXTRA_START_CALL_WITH_SPEAKERPHONE,
+                if (ussdMode) {
+                    appendLog("Opening the Android phone app for the USSD request.");
+                    startActivity(new Intent(Intent.ACTION_CALL, dialUri));
+                } else {
+                    TelecomManager telecom =
+                            (TelecomManager) getSystemService(Context.TELECOM_SERVICE);
+                    if (telecom == null) {
+                        throw new IllegalStateException("Android Telecom service is unavailable.");
+                    }
+                    Bundle callExtras = new Bundle();
+                    // Preserve the user's selected speaker / earpiece preference.
+                    callExtras.putBoolean(TelecomManager.EXTRA_START_CALL_WITH_SPEAKERPHONE,
                             prefs.getBoolean("call_on_speaker", false));
+                    appendLog("Requesting Android Telecom to place the outgoing call (without requiring this Activity to be foreground).");
+                    telecom.placeCall(dialUri, callExtras);
                 }
-                appendLog(ussdMode
-                        ? "Opening the Android phone app for the USSD request."
-                        : "Launching outgoing call through Android Telecom.");
-                startActivity(callIntent);
-                appendLog("Android accepted the call-launch intent.");
+                appendLog("Call request sent to Android.");
                 scheduleDisconnectAfterCallStarts();
 
                 if (batchNumbers != null && !batchNumbers.isEmpty()) batchIndex++;
             } catch (SecurityException e) {
+                updateCurrentCallHistory("Call launch failed: permission denied");
                 currentCallLaunched = false;
                 stopCallingLoop();
                 showError("Android denied the call. Check Phone permission and SIM availability.");
             } catch (Exception e) {
+                updateCurrentCallHistory("Call launch failed");
                 currentCallLaunched = false;
                 stopCallingLoop();
                 showError("Call could not be started: " + e.getMessage());
@@ -832,9 +880,15 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     }
 
     private void stopCallingLoop() {
+        if (currentCallLaunched && currentHistoryId > 0L) {
+            updateCurrentCallHistory("Session stopped; call may still be active");
+        }
         handler.removeCallbacks(backgroundStopRunnable);
         handler.removeCallbacks(callStepRunnable);
         clearDisconnectScheduling();
+        try {
+            RedialSessionService.stop(this);
+        } catch (Exception ignored) { }
         if (redialSessionRunning) redialSessionInUse = false;
         redialSessionRunning = false;
         if (callButton != null) {
@@ -871,6 +925,107 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         } else {
             disconnectTimeLayout.setVisibility(View.VISIBLE);
             disconnectModeInfo.setText(R.string.ar_disconnect_info_pickup);
+        }
+    }
+
+    private void saveLastUsedNumber(String value, String displayName) {
+        if (value == null || value.trim().isEmpty()) return;
+        String safeName = displayName == null || displayName.trim().isEmpty()
+                ? value : displayName.trim();
+        prefs.edit()
+                .putString(PREF_LAST_NUMBER, value)
+                .putString(PREF_LAST_NAME, safeName)
+                .apply();
+    }
+
+    private JSONArray readCallHistory() {
+        try {
+            return new JSONArray(prefs.getString(PREF_CALL_HISTORY, "[]"));
+        } catch (JSONException ignored) {
+            return new JSONArray();
+        }
+    }
+
+    private void beginCallHistory(String value, String displayName, String initialStatus) {
+        currentHistoryId = System.currentTimeMillis();
+        currentAttemptStartedAt = currentHistoryId;
+        currentAttemptNumber = value == null ? "" : value;
+        currentAttemptLabel = displayName == null ? currentAttemptNumber : displayName;
+        JSONObject entry = new JSONObject();
+        try {
+            entry.put("id", currentHistoryId);
+            entry.put("startedAt", currentAttemptStartedAt);
+            entry.put("number", currentAttemptNumber);
+            entry.put("label", currentAttemptLabel);
+            entry.put("status", initialStatus);
+        } catch (JSONException ignored) { }
+
+        JSONArray oldHistory = readCallHistory();
+        JSONArray newHistory = new JSONArray();
+        newHistory.put(entry);
+        for (int i = 0; i < oldHistory.length() && newHistory.length() < MAX_CALL_HISTORY; i++) {
+            JSONObject oldEntry = oldHistory.optJSONObject(i);
+            if (oldEntry != null && oldEntry.optLong("id") != currentHistoryId) {
+                newHistory.put(oldEntry);
+            }
+        }
+        prefs.edit().putString(PREF_CALL_HISTORY, newHistory.toString()).apply();
+        refreshCallHistoryView();
+    }
+
+    private void updateCurrentCallHistory(String status) {
+        if (currentHistoryId <= 0L) return;
+        JSONArray oldHistory = readCallHistory();
+        JSONArray updatedHistory = new JSONArray();
+        long endedAt = System.currentTimeMillis();
+        long durationSeconds = Math.max(0L, (endedAt - currentAttemptStartedAt) / 1000L);
+        for (int i = 0; i < oldHistory.length(); i++) {
+            JSONObject entry = oldHistory.optJSONObject(i);
+            if (entry == null) continue;
+            if (entry.optLong("id") == currentHistoryId) {
+                try {
+                    entry.put("status", status);
+                    entry.put("endedAt", endedAt);
+                    entry.put("durationSeconds", durationSeconds);
+                } catch (JSONException ignored) { }
+            }
+            updatedHistory.put(entry);
+        }
+        prefs.edit().putString(PREF_CALL_HISTORY, updatedHistory.toString()).apply();
+        currentHistoryId = -1L;
+        refreshCallHistoryView();
+    }
+
+    private void refreshCallHistoryView() {
+        if (callHistoryText == null || prefs == null) return;
+        JSONArray history = readCallHistory();
+        if (history.length() == 0) {
+            callHistoryText.setText(R.string.ar_history_empty);
+            return;
+        }
+        StringBuilder text = new StringBuilder();
+        SimpleDateFormat historyTime = new SimpleDateFormat("dd MMM yyyy, HH:mm:ss", Locale.getDefault());
+        for (int i = 0; i < history.length(); i++) {
+            JSONObject entry = history.optJSONObject(i);
+            if (entry == null) continue;
+            long startedAt = entry.optLong("startedAt", 0L);
+            String label = entry.optString("label", "");
+            String value = entry.optString("number", "");
+            String status = entry.optString("status", "Unknown");
+            if (label.isEmpty()) label = value;
+            text.append(historyTime.format(new Date(startedAt))).append("\n");
+            text.append(label);
+            if (!value.isEmpty() && !value.equals(label)) {
+                text.append(" • ").append(value);
+            }
+            text.append("\n").append(status);
+            long duration = entry.optLong("durationSeconds", -1L);
+            if (duration >= 0L) text.append(" • ").append(duration).append(" sec");
+            text.append("\n\n");
+        }
+        callHistoryText.setText(text.toString().trim());
+        if (callHistoryScroll != null) {
+            callHistoryScroll.post(() -> callHistoryScroll.fullScroll(View.FOCUS_UP));
         }
     }
 
