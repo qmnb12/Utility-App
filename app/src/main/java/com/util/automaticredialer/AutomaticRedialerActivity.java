@@ -192,20 +192,6 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         }
     };
 
-    private final Runnable backgroundStopRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (isFinishing() || isChangingConfigurations() || !redialSessionRunning) return;
-            if (prefs != null && prefs.getBoolean("run_in_background", false)) return;
-            if (isCallFlowActive()) {
-                handler.postDelayed(this, 3000);
-            } else {
-                appendLog("Session stopped: app left the foreground and background mode is disabled.");
-                stopCallingLoop();
-            }
-        }
-    };
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -713,11 +699,13 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 .putBoolean("run_in_background", runInBgCheckBox.isChecked())
                 .apply();
 
-        if (calls > 1 && !runInBgCheckBox.isChecked()) {
+        // Keep every user-started redial session active when the UI moves to the background.
+        // The foreground service supplies the ongoing, user-visible process priority.
+        if (!runInBgCheckBox.isChecked()) {
             runInBgCheckBox.setChecked(true);
-            prefs.edit().putBoolean("run_in_background", true).apply();
-            appendLog("Background session enabled automatically so the next call can run while the Phone app is open.");
         }
+        prefs.edit().putBoolean("run_in_background", true).apply();
+        appendLog("Background mode enabled for this redial session. Use Stop Redial to end it.");
 
         stopButtonWasPressed = false;
         sessionCompleted = false;
@@ -1035,7 +1023,6 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         if (currentCallLaunched && currentHistoryId > 0L) {
             updateCurrentCallHistory("Session stopped; call may still be active");
         }
-        handler.removeCallbacks(backgroundStopRunnable);
         handler.removeCallbacks(callStepRunnable);
         if (prefs != null) {
             prefs.edit()
@@ -1733,7 +1720,6 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
                 }
             } catch (SecurityException ignored) { }
         }
-        handler.removeCallbacks(backgroundStopRunnable);
         refreshCallButtonEnabled();
     }
 
@@ -1753,8 +1739,8 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             stopCallingLoop();
             return;
         }
-        boolean runInBackground = prefs != null && prefs.getBoolean("run_in_background", false);
-        if (!runInBackground) handler.postDelayed(backgroundStopRunnable, 3000);
+        // Do not stop an active redial session merely because the Activity is backgrounded.
+        // RedialSessionService remains in the foreground while the Phone app is visible.
     }
 
     @Override
