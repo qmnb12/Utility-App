@@ -32,7 +32,10 @@ public final class PhoneNumberHelper {
             if (digits.startsWith("0")) digits = digits.substring(1);
 
             // Avoid prefixing the country code twice when the user entered it without '+'.
-            if (!(digits.startsWith(countryDigits) && digits.length() > countryDigits.length() + 7)) {
+            // A 10-digit national number may itself begin with the country code
+            // (for example, an Indian mobile number beginning with 91).
+            // Only treat longer unprefixed input as country-code-prefixed.
+            if (!(digits.startsWith(countryDigits) && digits.length() > 10)) {
                 digits = countryDigits + digits;
             }
         }

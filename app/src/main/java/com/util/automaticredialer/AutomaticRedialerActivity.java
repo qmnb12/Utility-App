@@ -145,6 +145,12 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private final Runnable sessionHeartbeatRunnable = new Runnable() {
         @Override public void run() {
             if (!redialSessionRunning || prefs == null) return;
+            if (prefs.getBoolean("redial_stop_requested", false)) {
+                stopButtonWasPressed = true;
+                appendLog("Stop request received from the connected-call button.");
+                stopCallingLoop();
+                return;
+            }
             prefs.edit().putLong("redial_session_heartbeat", System.currentTimeMillis()).apply();
             handler.postDelayed(this, 2000L);
         }
@@ -245,6 +251,16 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         baseContext = getBaseContext();
         prefs = getSharedPreferences("ar_prefs", Context.MODE_PRIVATE);
+        // A persisted redial session is never resumed automatically after a fresh Activity process start.
+        if (prefs.getBoolean("redial_session_active", false) && !redialSessionInUse) {
+            prefs.edit()
+                    .putBoolean("redial_session_active", false)
+                    .putBoolean("redial_call_in_progress", false)
+                    .putBoolean("redial_stop_requested", false)
+                    .remove("redial_session_heartbeat")
+                    .remove("redial_call_started_at")
+                    .apply();
+        }
 
         TextView headerTxt = findViewById(R.id.app_header);
         if (headerTxt != null) headerTxt.setText(R.string.automatic_redialer);
@@ -741,6 +757,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             prefs.edit()
                     .putBoolean("redial_session_active", true)
                     .putBoolean("redial_call_in_progress", false)
+                    .putBoolean("redial_stop_requested", false)
                     .putLong("redial_session_heartbeat", System.currentTimeMillis())
                     .apply();
             handler.removeCallbacks(sessionHeartbeatRunnable);
@@ -1070,6 +1087,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             prefs.edit()
                     .putBoolean("redial_session_active", false)
                     .putBoolean("redial_call_in_progress", false)
+                    .putBoolean("redial_stop_requested", false)
                     .remove("redial_session_heartbeat")
                     .remove("redial_call_started_at")
                     .apply();

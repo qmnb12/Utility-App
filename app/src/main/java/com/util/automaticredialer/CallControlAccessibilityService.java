@@ -34,7 +34,6 @@ public class CallControlAccessibilityService extends AccessibilityService {
 
     private static final long SESSION_HEARTBEAT_MAX_AGE_MS = 10000L;
     private static final long UI_MONITOR_INTERVAL_MS = 1000L;
-    private static final long DIAL_START_GRACE_MS = 25000L;
     private static final Pattern TIMER_PATTERN =
             Pattern.compile("\\b(?:(\\d{1,2}):)?(\\d{1,2}):(\\d{2})\\b");
 
@@ -53,16 +52,7 @@ public class CallControlAccessibilityService extends AccessibilityService {
                 return;
             }
 
-            if (isPhoneCallIdle()) {
-                long startedAt = getSharedPreferences("ar_prefs", MODE_PRIVATE)
-                        .getLong("redial_call_started_at", 0L);
-                if (startedAt <= 0L || System.currentTimeMillis() - startedAt > DIAL_START_GRACE_MS) {
-                    hideStopOverlay();
-                    overlayDismissedForCurrentCall = false;
-                    monitorRunning = false;
-                    return;
-                }
-            } else if (!overlayDismissedForCurrentCall
+            if (!overlayDismissedForCurrentCall
                     && !isOverlayVisible() && hasConnectedCallTimer()) {
                 showStopOverlay();
             }
@@ -141,17 +131,6 @@ public class CallControlAccessibilityService extends AccessibilityService {
         long heartbeat = prefs.getLong("redial_session_heartbeat", 0L);
         return heartbeat > 0L
                 && System.currentTimeMillis() - heartbeat <= SESSION_HEARTBEAT_MAX_AGE_MS;
-    }
-
-    private boolean isPhoneCallIdle() {
-        try {
-            TelephonyManager manager =
-                    (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
-            return manager == null
-                    || manager.getCallState() == TelephonyManager.CALL_STATE_IDLE;
-        } catch (SecurityException e) {
-            return false;
-        }
     }
 
     private boolean hasConnectedCallTimer() {
@@ -267,6 +246,8 @@ public class CallControlAccessibilityService extends AccessibilityService {
 
         stopButton.setOnClickListener(v -> {
             overlayDismissedForCurrentCall = true;
+            getSharedPreferences("ar_prefs", MODE_PRIVATE).edit()
+                    .putBoolean("redial_stop_requested", true).apply();
             hideStopOverlay();
             Intent stopIntent = new Intent(this, AutomaticRedialerActivity.class);
             stopIntent.setAction(ACTION_STOP_REDIAL);
@@ -276,9 +257,7 @@ public class CallControlAccessibilityService extends AccessibilityService {
             try {
                 startActivity(stopIntent);
             } catch (RuntimeException ignored) {
-                Intent fallback = new Intent(ACTION_STOP_REDIAL);
-                fallback.setPackage(getPackageName());
-                sendBroadcast(fallback);
+                // The Activity heartbeat will consume the persisted stop request.
             }
         });
 

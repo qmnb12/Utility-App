@@ -14,6 +14,18 @@ public class PhoneNumberHelperTest {
     }
 
     @Test
+    public void prefixesIndianTenDigitNumberEvenWhenItStartsWithCountryCodeDigits() {
+        assertEquals("+919123456789",
+                PhoneNumberHelper.normalizePhoneNumber("9123456789", "+91"));
+    }
+
+    @Test
+    public void acceptsIndianNumberWithCountryCodeButWithoutPlus() {
+        assertEquals("+919876543210",
+                PhoneNumberHelper.normalizePhoneNumber("919876543210", "+91"));
+    }
+
+    @Test
     public void removesIndianTrunkZero() {
         assertEquals("+919876543210",
                 PhoneNumberHelper.normalizePhoneNumber("09876543210", "+91"));
