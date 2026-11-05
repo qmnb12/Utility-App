@@ -1734,7 +1734,6 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             } catch (SecurityException ignored) { }
         }
         handler.removeCallbacks(backgroundStopRunnable);
-        updateCallOverlayButtonLabel();
         refreshCallButtonEnabled();
     }
 
