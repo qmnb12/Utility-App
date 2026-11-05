@@ -42,6 +42,12 @@
     <string name="ar_audio_route_speaker">Loudspeaker</string>
     <string name="ar_audio_route_info">Selected route is requested when each call starts. Bluetooth or wired headsets may take priority. USSD is not affected.</string>
     <string name="ar_run_in_background">Continue automatic redial in background while the Phone app is open</string>
+    <string name="ar_accessibility_service_name">Automatic Redialer Call Controls</string>
+    <string name="ar_accessibility_service_description">Shows a Stop Redial button when the Phone app displays a connected call timer during an active automatic redial session.</string>
+    <string name="ar_enable_stop_overlay">Enable Stop Redial Button</string>
+    <string name="ar_stop_overlay_enabled">Stop Redial Button Enabled</string>
+    <string name="ar_stop_overlay_info">During a connected call, a Stop Redial button can appear over the Phone screen. Enable the Accessibility service to use this feature.</string>
+    <string name="ar_stop_overlay_settings_hint">Accessibility Settings में Automatic Redialer Call Controls enable करें।</string>
     <string name="ar_history_title">Recent Call History</string>
     <string name="ar_history_empty">No call history saved yet.</string>
     <string name="ar_clear_history">Clear</string>

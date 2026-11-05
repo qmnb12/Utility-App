@@ -7,6 +7,7 @@ import android.app.RemoteAction;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.ComponentName;
 import android.content.res.ColorStateList;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -20,6 +21,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.telecom.TelecomManager;
 import android.telephony.TelephonyManager;
 import android.util.Rational;
@@ -139,6 +141,14 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
     private Button sessionFeedDialerButton;
     private boolean showingSessionFeed;
     private boolean sessionCompleted;
+    private Button enableCallOverlayButton;
+    private final Runnable sessionHeartbeatRunnable = new Runnable() {
+        @Override public void run() {
+            if (!redialSessionRunning || prefs == null) return;
+            prefs.edit().putLong("redial_session_heartbeat", System.currentTimeMillis()).apply();
+            handler.postDelayed(this, 2000L);
+        }
+    };
 
     private final String[] countryCodes = {
             "+91", "+1", "+44", "+971", "+61", "+65", "+81", "+49", "+33",
@@ -259,6 +269,11 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         batchNumbersEditText = findViewById(R.id.ar_batch_numbers);
         ussdModeCheckBox = findViewById(R.id.ar_ussd_mode);
         runInBgCheckBox = findViewById(R.id.ar_run_in_background);
+        enableCallOverlayButton = findViewById(R.id.ar_enable_call_overlay);
+        if (enableCallOverlayButton != null) {
+            enableCallOverlayButton.setOnClickListener(v -> openCallOverlayAccessibilitySettings());
+            updateCallOverlayButtonLabel();
+        }
         selectContactButton = findViewById(R.id.ar_select_contact);
         liveLogText = null;
         liveLogScroll = null;
@@ -723,6 +738,16 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         try {
             redialSessionInUse = true;
             redialSessionRunning = true;
+            prefs.edit()
+                    .putBoolean("redial_session_active", true)
+                    .putBoolean("redial_call_in_progress", false)
+                    .putLong("redial_session_heartbeat", System.currentTimeMillis())
+                    .apply();
+            handler.removeCallbacks(sessionHeartbeatRunnable);
+            handler.postDelayed(sessionHeartbeatRunnable, 2000L);
+            if (!isCallOverlayAccessibilityEnabled()) {
+                appendLog("Connected-call Stop button is disabled. Enable it from the Stop Redial Button setting.");
+            }
             waitingForAppVisibleLogged = false;
             refreshCallButtonEnabled();
             RedialSessionService.start(this);
@@ -892,6 +917,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         boolean hadActiveAttempt = currentCallLaunched;
         if (hadActiveAttempt) updateCurrentCallHistory("Call ended");
         currentCallLaunched = false;
+        if (prefs != null) prefs.edit()
+                .putBoolean("redial_call_in_progress", false)
+                .remove("redial_call_started_at")
+                .apply();
         sawCallState = false;
         clearDisconnectScheduling();
         updatePipAutoEnter(false);
@@ -956,6 +985,10 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             try {
                 registerCallStateListener();
                 currentCallLaunched = true;
+                prefs.edit()
+                        .putBoolean("redial_call_in_progress", !ussdMode)
+                        .putLong("redial_call_started_at", System.currentTimeMillis())
+                        .apply();
                 sawCallState = false;
                 remaining--;
                 int completed = totalCalls - remaining;
@@ -1002,11 +1035,13 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             } catch (SecurityException e) {
                 updateCurrentCallHistory("Call launch failed: permission denied");
                 currentCallLaunched = false;
+                prefs.edit().putBoolean("redial_call_in_progress", false).remove("redial_call_started_at").apply();
                 stopCallingLoop();
                 showError("Android denied the call. Check Phone permission and SIM availability.");
             } catch (Exception e) {
                 updateCurrentCallHistory("Call launch failed");
                 currentCallLaunched = false;
+                prefs.edit().putBoolean("redial_call_in_progress", false).remove("redial_call_started_at").apply();
                 stopCallingLoop();
                 showError("Call could not be started: " + e.getMessage());
             }
@@ -1030,6 +1065,15 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         }
         handler.removeCallbacks(backgroundStopRunnable);
         handler.removeCallbacks(callStepRunnable);
+        handler.removeCallbacks(sessionHeartbeatRunnable);
+        if (prefs != null) {
+            prefs.edit()
+                    .putBoolean("redial_session_active", false)
+                    .putBoolean("redial_call_in_progress", false)
+                    .remove("redial_session_heartbeat")
+                    .remove("redial_call_started_at")
+                    .apply();
+        }
         clearDisconnectScheduling();
         try {
             RedialSessionService.stop(this);
@@ -1561,6 +1605,15 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         } else if (ACTION_PIP_RESTORE_DIALER.equals(intent.getAction())) {
             appendLog("Full-screen Live Session Feed opened.");
             showSessionFeed();
+        } else if (CallControlAccessibilityService.ACTION_STOP_REDIAL.equals(intent.getAction())) {
+            stopButtonWasPressed = true;
+            appendLog("Stop Redial tapped from the connected-call overlay or foreground notification.");
+            stopCallingLoop();
+            refreshCallButtonEnabled();
+            refreshSessionFeed();
+            if (callButton != null) {
+                Snackbar.make(callButton, "Redial stopped. The connected call is not ended.", Snackbar.LENGTH_LONG).show();
+            }
         }
     }
 
@@ -1569,6 +1622,34 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
         super.onNewIntent(intent);
         setIntent(intent);
         handlePipActionIntent(intent);
+    }
+
+    private boolean isCallOverlayAccessibilityEnabled() {
+        String enabledServices = Settings.Secure.getString(
+                getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+        if (enabledServices == null || enabledServices.isEmpty()) return false;
+        ComponentName expected = new ComponentName(this, CallControlAccessibilityService.class);
+        for (String entry : enabledServices.split(":")) {
+            ComponentName enabled = ComponentName.unflattenFromString(entry);
+            if (expected.equals(enabled)) return true;
+        }
+        return false;
+    }
+
+    private void updateCallOverlayButtonLabel() {
+        if (enableCallOverlayButton == null) return;
+        enableCallOverlayButton.setText(isCallOverlayAccessibilityEnabled()
+                ? R.string.ar_stop_overlay_enabled : R.string.ar_enable_stop_overlay);
+    }
+
+    private void openCallOverlayAccessibilitySettings() {
+        try {
+            startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+            Snackbar.make(enableCallOverlayButton,
+                    R.string.ar_stop_overlay_settings_hint, Snackbar.LENGTH_LONG).show();
+        } catch (RuntimeException e) {
+            showError("Could not open Accessibility settings: " + e.getMessage());
+        }
     }
 
     private void showError(String message) {
@@ -1712,6 +1793,7 @@ public class AutomaticRedialerActivity extends AppCompatActivity {
             } catch (SecurityException ignored) { }
         }
         handler.removeCallbacks(backgroundStopRunnable);
+        updateCallOverlayButtonLabel();
         refreshCallButtonEnabled();
     }
 
