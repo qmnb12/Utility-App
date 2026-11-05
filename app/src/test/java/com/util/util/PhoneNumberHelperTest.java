@@ -26,6 +26,12 @@ public class PhoneNumberHelperTest {
     }
 
     @Test
+    public void preservesSingaporeNumberWithCountryCodeWithoutPlus() {
+        assertEquals("+6581234567",
+                PhoneNumberHelper.normalizePhoneNumber("6581234567", "+65"));
+    }
+
+    @Test
     public void removesIndianTrunkZero() {
         assertEquals("+919876543210",
                 PhoneNumberHelper.normalizePhoneNumber("09876543210", "+91"));

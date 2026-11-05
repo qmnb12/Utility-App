@@ -32,12 +32,13 @@ public final class PhoneNumberHelper {
             if (digits.startsWith("0")) digits = digits.substring(1);
 
             // Avoid prefixing the country code twice when the user entered it without '+'.
-            // A 10-digit national number may itself begin with the country code
-            // (for example, an Indian mobile number beginning with 91).
-            // Only treat longer unprefixed input as country-code-prefixed.
-            if (!(digits.startsWith(countryDigits) && digits.length() > 10)) {
-                digits = countryDigits + digits;
-            }
+            // Indian national numbers are exactly 10 digits and can begin with
+            // "91". Do not mistake those local digits for an already-entered +91 prefix.
+            boolean indianTenDigitLocal = "91".equals(countryDigits) && digits.length() == 10;
+            boolean alreadyPrefixed = digits.startsWith(countryDigits)
+                    && digits.length() > countryDigits.length() + 7
+                    && !indianTenDigitLocal;
+            if (!alreadyPrefixed) digits = countryDigits + digits;
         }
 
         if (digits.length() < 4 || digits.length() > 15) return null;
