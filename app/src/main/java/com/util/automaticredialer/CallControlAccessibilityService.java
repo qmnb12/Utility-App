@@ -33,7 +33,7 @@ public class CallControlAccessibilityService extends AccessibilityService {
             "com.util.automaticredialer.action.STOP_REDIAL_FROM_CONNECTED_CALL";
 
     private static final long SESSION_HEARTBEAT_MAX_AGE_MS = 10000L;
-    private static final long UI_MONITOR_INTERVAL_MS = 700L;
+    private static final long UI_MONITOR_INTERVAL_MS = 1000L;
     private static final long DIAL_START_GRACE_MS = 25000L;
     private static final Pattern TIMER_PATTERN =
             Pattern.compile("\\b(?:(\\d{1,2}):)?(\\d{1,2}):(\\d{2})\\b");
@@ -126,7 +126,10 @@ public class CallControlAccessibilityService extends AccessibilityService {
                 || value.equals("com.android.incallui")
                 || value.equals("com.android.phone")
                 || value.equals("com.samsung.android.dialer")
-                || value.equals("com.samsung.android.incallui");
+                || value.equals("com.samsung.android.incallui")
+                || value.equals("com.miui.incallui")
+                || value.equals("com.miui.contacts")
+                || value.equals("com.android.contacts");
     }
 
     private boolean isTrackedRedialCall() {

@@ -24,19 +24,19 @@
         android:theme="@style/Theme.Util">
 
         <activity
-            android:name=".features.FeatureHubActivity"
+            android:name="com.util.features.FeatureHubActivity"
             android:exported="false" />
 
         <receiver
-            android:name=".features.ScheduledSmsReceiver"
+            android:name="com.util.features.ScheduledSmsReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".features.SmsStatusReceiver"
+            android:name="com.util.features.SmsStatusReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".features.ScheduledSmsBootReceiver"
+            android:name="com.util.features.ScheduledSmsBootReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter>
@@ -47,11 +47,11 @@
         </receiver>
 
         <activity
-            android:name=".messagesender.MessageSenderActivity"
+            android:name="com.util.messagesender.MessageSenderActivity"
             android:exported="false" />
 
         <service
-            android:name=".automaticredialer.CallControlAccessibilityService"
+            android:name="com.util.automaticredialer.CallControlAccessibilityService"
             android:label="@string/ar_accessibility_service_name"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="true">
@@ -64,7 +64,7 @@
         </service>
 
         <service
-            android:name=".automaticredialer.RedialSessionService"
+            android:name="com.util.automaticredialer.RedialSessionService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
@@ -73,11 +73,11 @@
         </service>
 
         <activity
-            android:name=".automaticredialer.CallHistoryActivity"
+            android:name="com.util.automaticredialer.CallHistoryActivity"
             android:exported="false" />
 
         <activity
-            android:name=".automaticredialer.AutomaticRedialerActivity"
+            android:name="com.util.automaticredialer.AutomaticRedialerActivity"
             android:exported="false"
             android:launchMode="singleTask"
             android:resizeableActivity="true"
@@ -85,7 +85,7 @@
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation" />
 
         <activity
-            android:name=".main.MainActivity"
+            android:name="com.util.main.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
