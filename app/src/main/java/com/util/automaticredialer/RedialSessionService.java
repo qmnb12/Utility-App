@@ -57,7 +57,7 @@ public class RedialSessionService extends Service {
             builder = new Notification.Builder(this);
         }
         Intent stopIntent = new Intent(this, AutomaticRedialerActivity.class);
-        stopIntent.setAction(CallControlAccessibilityService.ACTION_STOP_REDIAL);
+        stopIntent.setAction(AutomaticRedialerActivity.ACTION_PIP_STOP_SESSION);
         stopIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent stopPendingIntent = PendingIntent.getActivity(
@@ -65,7 +65,7 @@ public class RedialSessionService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Action stopAction = new Notification.Action.Builder(
                 Icon.createWithResource(this, android.R.drawable.ic_media_pause),
-                "Stop Redial", stopPendingIntent).build();
+                "STOP REDIAL", stopPendingIntent).build();
 
         Notification notification = builder
                 .setSmallIcon(R.drawable.ic_app_icon)

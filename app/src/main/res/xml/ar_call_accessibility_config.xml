@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeWindowsChanged|typeViewTextChanged"
-    android:packageNames="com.google.android.dialer,com.android.dialer,com.android.incallui,com.android.phone,com.samsung.android.dialer,com.samsung.android.incallui,com.miui.incallui,com.miui.contacts,com.android.contacts"
-    android:accessibilityFeedbackType="feedbackGeneric"
-    android:notificationTimeout="100"
-    android:canRetrieveWindowContent="true"
-    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows"
-    android:description="@string/ar_accessibility_service_description" />

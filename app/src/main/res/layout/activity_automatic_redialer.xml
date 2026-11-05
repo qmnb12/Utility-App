@@ -358,26 +358,6 @@
                 android:textColor="#666666"
                 android:textSize="12sp" />
 
-            <Button
-                android:id="@+id/ar_enable_call_overlay"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:backgroundTint="@color/color10_dark"
-                android:padding="10dp"
-                android:text="@string/ar_enable_stop_overlay"
-                android:textAllCaps="false"
-                android:textColor="@android:color/white"
-                android:textSize="14sp" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
-                android:text="@string/ar_stop_overlay_info"
-                android:textColor="#666666"
-                android:textSize="12sp" />
-
             <CheckBox
                 android:id="@+id/ar_run_in_background"
                 android:layout_width="match_parent"

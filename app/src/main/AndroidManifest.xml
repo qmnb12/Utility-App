@@ -51,19 +51,6 @@
             android:exported="false" />
 
         <service
-            android:name="com.util.automaticredialer.CallControlAccessibilityService"
-            android:label="@string/ar_accessibility_service_name"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/ar_call_accessibility_config" />
-        </service>
-
-        <service
             android:name="com.util.automaticredialer.RedialSessionService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
