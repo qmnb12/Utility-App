@@ -4,21 +4,26 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <rect
-        android:width="108"
-        android:height="108"
-        android:radius="23.6"
-        android:fillColor="#022D9C" />
+    <!-- rounded square background -->
+    <path
+        android:fillColor="#FF022D9C"
+        android:pathData="M23.6 0H84.4A23.6 23.6 0 0 1 108 23.6V84.4A23.6 23.6 0 0 1 84.4 108H23.6A23.6 23.6 0 0 1 0 84.4V23.6A23.6 23.6 0 0 1 23.6 0Z" />
     <!-- white chat bubble -->
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M30.4,24.4h47.1q10,0 10,10v26q0,10 -10,10h-47.1q-10,0 -10,-10v-26q0,-10 10,-10z" />
+        android:pathData="M30.4 24.4H77.5Q87.5 24.4 87.5 34.4V60.4Q87.5 70.4 77.5 70.4H30.4Q20.4 70.4 20.4 60.4V34.4Q20.4 24.4 30.4 24.4Z" />
     <!-- bubble tail -->
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M31.2,69l-10,14.7 23.1,-14.7z" />
+        android:pathData="M31.2 69L21.2 83.7L54.3 69Z" />
     <!-- handset glyph, negative-space blue on the white bubble -->
-    <path
-        android:fillColor="#FF022D9C"
-        android:pathData="M46.2,42.7c3,6 8.1,10.8 14.1,13.8l4.6,-4.6c0.6,-0.6 1.4,-0.8 2.2,-0.5 2.4,0.8 4.9,1.2 7.6,1.2 1.2,0 2.1,1 2.1,2.1v7.3c0,1.2 -1,2.1 -2.1,2.1 -19.8,0 -36,-16.2 -36,-36 0,-1.2 1,-2.1 2.1,-2.1h7.3c1.2,0 2.1,1 2.1,2.1 0,2.7 0.4,5.1 1.2,7.6 0.2,0.8 0.1,1.6 -0.5,2.2l-4.6,4.6z" />
+    <group
+        android:translateX="35.3"
+        android:translateY="27.9"
+        android:scaleX="1.625"
+        android:scaleY="1.625">
+        <path
+            android:fillColor="#FF022D9C"
+            android:pathData="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2 -2.2c0.27 -0.27 0.67 -0.36 1.02 -0.24c1.12 0.37 2.33 0.57 3.57 0.57c0.55 0 1 0.45 1 1V20c0 0.55 -0.45 1 -1 1c-9.39 0 -17 -7.61 -17 -17c0 -0.55 0.45 -1 1 -1h3.5c0.55 0 1 0.45 1 1c0 1.25 0.2 2.45 0.57 3.57c0.11 0.35 0.03 0.74 -0.25 1.02l-2.2 2.2z" />
+    </group>
 </vector>
