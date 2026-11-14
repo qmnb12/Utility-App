@@ -1,12 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="512dp"
-    android:height="512dp"
-    android:viewportWidth="512"
-    android:viewportHeight="512">
-    <rect width="512" height="512" rx="112" ry="112" android:fillColor="#022D9C"/>
-    <path android:fillColor="#FFFFFFFF"
-        android:pathData="M128 128h104v64h-104V128zM128 256h104v64h-104V256zM128 384h104v64h-104V384zM280 128h112v64h-112V128zM280 256h112v64h-112V256zM280 384h112v64h-112V384z"/>
-    <path android:fillColor="#FF70A0FF"
-        android:pathData="M128 128h104v64h-104V128zM128 256h104v64h-104V256zM128 384h104v64h-104V384zM280 128h112v64h-112V128zM280 256h112v64h-112V256zM280 384h112v64h-112V384z"/>
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <rect
+        android:width="108"
+        android:height="108"
+        android:radius="23.6"
+        android:fillColor="#022D9C" />
+    <!-- white chat bubble -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M30.4,24.4h47.1q10,0 10,10v26q0,10 -10,10h-47.1q-10,0 -10,-10v-26q0,-10 10,-10z" />
+    <!-- bubble tail -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M31.2,69l-10,14.7 23.1,-14.7z" />
+    <!-- handset glyph, negative-space blue on the white bubble -->
+    <path
+        android:fillColor="#FF022D9C"
+        android:pathData="M46.2,42.7c3,6 8.1,10.8 14.1,13.8l4.6,-4.6c0.6,-0.6 1.4,-0.8 2.2,-0.5 2.4,0.8 4.9,1.2 7.6,1.2 1.2,0 2.1,1 2.1,2.1v7.3c0,1.2 -1,2.1 -2.1,2.1 -19.8,0 -36,-16.2 -36,-36 0,-1.2 1,-2.1 2.1,-2.1h7.3c1.2,0 2.1,1 2.1,2.1 0,2.7 0.4,5.1 1.2,7.6 0.2,0.8 0.1,1.6 -0.5,2.2l-4.6,4.6z" />
 </vector>
