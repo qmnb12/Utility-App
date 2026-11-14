@@ -59,70 +59,74 @@
 
                 <Button
                     android:id="@+id/ar_select_contact"
+                style="@style/Widget.Util.QuickAction"
                     android:layout_width="0dp"
-                    android:layout_height="76dp"
+                    android:layout_height="72dp"
                     android:layout_weight="1"
                     android:backgroundTint="@color/color30_dark"
                     android:drawableTop="@drawable/ic_contact"
-                    android:drawablePadding="2dp"
+                    android:drawablePadding="4dp"
                     android:gravity="center"
                     android:minWidth="0dp"
-                    android:padding="3dp"
+                    android:padding="6dp"
                     android:text="@string/ar_select_contact_short"
                     android:textAllCaps="false"
                     android:textColor="@android:color/white"
-                    android:textSize="10sp" />
+                    android:textSize="11sp" />
 
                 <Button
                     android:id="@+id/ar_last_call"
+                style="@style/Widget.Util.QuickAction"
                     android:layout_width="0dp"
-                    android:layout_height="76dp"
-                    android:layout_marginStart="5dp"
+                    android:layout_height="72dp"
+                    android:layout_marginStart="8dp"
                     android:layout_weight="1"
                     android:backgroundTint="@color/color10_dark"
                     android:drawableTop="@drawable/ic_last_call"
-                    android:drawablePadding="2dp"
+                    android:drawablePadding="4dp"
                     android:gravity="center"
                     android:minWidth="0dp"
-                    android:padding="3dp"
+                    android:padding="6dp"
                     android:text="@string/ar_last_call"
                     android:textAllCaps="false"
                     android:textColor="@android:color/white"
-                    android:textSize="10sp" />
+                    android:textSize="11sp" />
 
                 <Button
                     android:id="@+id/ar_open_history"
+                style="@style/Widget.Util.QuickAction"
                     android:layout_width="0dp"
-                    android:layout_height="76dp"
-                    android:layout_marginStart="5dp"
+                    android:layout_height="72dp"
+                    android:layout_marginStart="8dp"
                     android:layout_weight="1"
                     android:backgroundTint="@color/color10_dark"
                     android:drawableTop="@drawable/ic_call_history"
-                    android:drawablePadding="2dp"
+                    android:drawablePadding="4dp"
                     android:gravity="center"
                     android:minWidth="0dp"
-                    android:padding="3dp"
+                    android:padding="6dp"
                     android:text="@string/ar_history_short"
                     android:textAllCaps="false"
                     android:textColor="@android:color/white"
-                    android:textSize="10sp" />
+                    android:textSize="11sp" />
 
                 <Button
                     android:id="@+id/ar_open_log"
+                style="@style/Widget.Util.QuickAction"
                     android:layout_width="0dp"
-                    android:layout_height="76dp"
-                    android:layout_marginStart="5dp"
+                    android:layout_height="72dp"
+                    android:layout_marginStart="8dp"
                     android:layout_weight="1"
                     android:backgroundTint="@color/color10_dark"
                     android:drawableTop="@drawable/ic_live_log"
-                    android:drawablePadding="2dp"
+                    android:drawablePadding="4dp"
                     android:gravity="center"
                     android:minWidth="0dp"
-                    android:padding="3dp"
+                    android:padding="6dp"
                     android:text="@string/ar_live_log_short"
                     android:textAllCaps="false"
                     android:textColor="@android:color/white"
-                    android:textSize="10sp" />
+                    android:textSize="11sp" />
             </LinearLayout>
 
             <LinearLayout
@@ -156,18 +160,18 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:text="@string/ar_no_of_calls"
-                android:textColor="@android:color/black"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
             <EditText
                 android:id="@+id/ar_no_of_calls"
-                android:layout_width="70dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:inputType="number"
                 android:text="10"
-                android:textColor="@android:color/black"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="16sp"
                 android:gravity="center" />
 
@@ -177,18 +181,18 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:text="@string/ar_call_gap"
-                android:textColor="@android:color/black"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
             <EditText
                 android:id="@+id/ar_call_gap"
-                android:layout_width="70dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:inputType="number"
                 android:text="10"
-                android:textColor="@android:color/black"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="16sp"
                 android:gravity="center" />
 
@@ -198,7 +202,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="@string/ar_call_gap_info"
-                android:textColor="#666666"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="12sp" />
 
             <TextView
@@ -207,7 +211,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:text="@string/ar_disconnect_mode"
-                android:textColor="@android:color/black"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
@@ -252,7 +256,7 @@
                 android:layout_marginEnd="8dp"
                 android:layout_marginBottom="4dp"
                 android:lineSpacingExtra="2dp"
-                android:textColor="#666666"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="12sp" />
 
             <LinearLayout
@@ -269,16 +273,16 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/ar_disconnect_sec"
-                    android:textColor="@android:color/black"
+                    android:textColor="?attr/colorOnSurface"
                     android:textSize="14sp" />
 
                 <EditText
                     android:id="@+id/ar_disconnect_sec"
-                    android:layout_width="70dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="number"
                     android:text="5"
-                    android:textColor="@android:color/black"
+                    android:textColor="?attr/colorOnSurface"
                     android:textSize="16sp"
                     android:gravity="center" />
             </LinearLayout>
@@ -292,7 +296,7 @@
                 android:inputType="textMultiLine"
                 android:lines="2"
                 android:gravity="top|start"
-                android:textColor="@android:color/black"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp" />
 
             <TextView
@@ -302,7 +306,7 @@
                 android:layout_marginTop="12dp"
                 android:gravity="center"
                 android:text="@string/ar_current_no_of_call"
-                android:textColor="@android:color/black"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -312,7 +316,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="@string/ar_ussd_mode"
-                android:textColor="@android:color/black"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp" />
 
             <TextView
@@ -321,7 +325,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:text="@string/ar_audio_route_label"
-                android:textColor="@android:color/black"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
@@ -355,7 +359,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="@string/ar_audio_route_info"
-                android:textColor="#666666"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="12sp" />
 
             <CheckBox
@@ -364,20 +368,17 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="@string/ar_run_in_background"
-                android:textColor="@android:color/black"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp" />
 
             <Button
                 android:id="@+id/ar_button_call"
+                style="@style/Widget.Util.Button.Primary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:backgroundTint="@color/color10_dark"
-                android:padding="12dp"
-                android:text="@string/ar_call"
-                android:textColor="@android:color/white"
-                android:textSize="16sp"
-                android:textAllCaps="false" />
+                android:text="@string/ar_call" />
 
             <Button
                 android:id="@+id/ar_stop_call"
@@ -387,7 +388,7 @@
                 android:backgroundTint="@color/color30_light"
                 android:padding="12dp"
                 android:text="@string/ar_stop"
-                android:textColor="@android:color/black"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="16sp"
                 android:textAllCaps="false" />
 

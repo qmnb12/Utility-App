@@ -1,9 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Brand palette (unchanged semantics) -->
     <color name="color10_light">#FF70A0FF</color>
     <color name="color10_dark">#FF022D9C</color>
     <color name="color30_light">#FF80837C</color>
     <color name="color30_dark">#FF000000</color>
     <color name="color60_dark">#FFFFFFFF</color>
     <color name="color60_light">#FFFFFFFF</color>
+
+    <!-- M3 semantic colors (light theme) -->
+    <color name="md_primary">#FF022D9C</color>
+    <color name="md_on_primary">#FFFFFFFF</color>
+    <color name="md_primary_container">#FFD3E2FF</color>
+    <color name="md_on_primary_container">#FF001A41</color>
+    <color name="md_secondary">#FF5A5F66</color>
+    <color name="md_on_secondary">#FFFFFFFF</color>
+    <color name="md_tertiary">#FF38656E</color>
+    <color name="md_on_tertiary">#FFFFFFFF</color>
+    <color name="md_surface">#FFFDFDFF</color>
+    <color name="md_on_surface">#FF191C1F</color>
+    <color name="md_surface_variant">#FFE1E3EC</color>
+    <color name="md_on_surface_variant">#FF43474E</color>
+    <color name="md_error">#FFBA1A1A</color>
+    <color name="md_on_error">#FFFFFFFF</color>
+    <color name="md_outline">#FF74777F</color>
+    <color name="md_outline_variant">#FFC4C6D0</color>
 </resources>
