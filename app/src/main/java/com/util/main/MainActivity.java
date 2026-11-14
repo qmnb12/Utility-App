@@ -1,6 +1,5 @@
 package com.util.main;
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.os.Bundle;
@@ -22,8 +21,6 @@ public class MainActivity extends AppCompatActivity {
     public static int COLOR30_LIGHT = 0xFFEF9A9A;
     public static int COLOR60_DARK = 0xFF1565C0;
     public static int COLOR60_LIGHT = 0xFF90CAF9;
-    Context baseContext = null;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         int savedTheme = getSharedPreferences("utility_feature_data", MODE_PRIVATE)
@@ -36,20 +33,19 @@ public class MainActivity extends AppCompatActivity {
         headerTxt.setText(R.string.app_name);
 
         Button automaticRedialerBtn = findViewById(R.id.automatic_redialer);
-        automaticRedialerBtn.setOnClickListener(v -> startActivity(new Intent(baseContext, AutomaticRedialerActivity.class)));
+        automaticRedialerBtn.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, AutomaticRedialerActivity.class)));
 
         Button messageSenderBtn = findViewById(R.id.message_sender);
-        messageSenderBtn.setOnClickListener(v -> startActivity(new Intent(baseContext, MessageSenderActivity.class)));
+        messageSenderBtn.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, MessageSenderActivity.class)));
 
         Button featureHubBtn = findViewById(R.id.feature_hub);
-        featureHubBtn.setOnClickListener(v -> startActivity(new Intent(baseContext, FeatureHubActivity.class)));
+        featureHubBtn.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, FeatureHubActivity.class)));
     }
 
     private void mainInit() {
         setMainColors();
         com.util.databinding.ActivityMainBinding mainBinding = com.util.databinding.ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(mainBinding.getRoot());
-        baseContext = getBaseContext();
     }
 
     private void setMainColors() {
